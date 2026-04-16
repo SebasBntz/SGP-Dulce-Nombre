@@ -1,0 +1,49 @@
+{
+  "name": "sistema-parroquia",
+  "version": "1.0.0",
+  "author": "Sebastian Benitez Beleño",
+  "description": "Sistema de Gestión Parroquial",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder -w"
+  },
+  "build": {
+    "appId": "com.parroquia.sgpdulcenombre",
+    "productName": "SGP-DulceNombre",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico",
+      "executableName": "SGP-DulceNombre"
+    },
+    "extraResources": [
+      {
+        "from": "../backend/dist/backend.exe",
+        "to": "backend.exe"
+      },
+      {
+        "from": "../frontend",
+        "to": "frontend"
+      }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SGP-DulceNombre"
+    }
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  }
+}
+

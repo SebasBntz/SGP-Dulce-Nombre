@@ -1,0 +1,33 @@
+# Entornos Virtuales
+.venv/
+venv/
+env/
+
+# Variables de entorno y secretos
+.env
+.env.local
+
+# Bases de datos locales
+*.db
+*.sqlite3
+backend/parroquia.db
+
+# Caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node / Electron (Frontend & Desktop)
+node_modules/
+dist/
+build/
+*.exe
+
+# Carpetas de subidas de archivos o estáticos dinámicos
+backend/static/archivos/
+backend/static/pdfs/
+
+# Configuraciones de IDE (VSCode, etc)
+.vscode/
+.idea/
+.DS_Store

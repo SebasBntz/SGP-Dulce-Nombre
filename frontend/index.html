@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Parroquia - Gestión de Actas</title>
+    <!-- Auth Guard - Redirects if not logged in -->
+    <script src="auth.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container" id="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-church"></i>
+                <span>Dulce Nombre de Jesús</span>
+            </div>
+            <nav>
+                <ul>
+                    <li class="active" onclick="showSection('dashboard')"><i class="fas fa-home"></i> Inicio</li>
+                    <li onclick="showSection('bautizos')"><i class="fas fa-baby"></i> Bautizos</li>
+                    <li onclick="showSection('matrimonios')"><i class="fas fa-heart"></i> Matrimonios</li>
+                    <li onclick="showSection('confirmaciones')"><i class="fas fa-dove"></i> Confirmación</li>
+                    <li onclick="showSection('comuniones')"><i class="fas fa-bread-slice"></i> 1ra Comunión</li>
+                    <li onclick="showSection('sacerdotes')"><i class="fas fa-user-tie"></i> Sacerdotes</li>
+                    <li onclick="showSection('grupos')"><i class="fas fa-layer-group"></i> Grupos</li>
+                    <li onclick="showSection('aportes')"><i class="fas fa-hand-holding-usd"></i> Aportes</li>
+                    <li onclick="performBackup()" style="color: #10b981; font-weight: 600;"><i class="fas fa-database"></i> Respaldar BD</li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <header class="top-bar">
+                <div class="user-info">
+                    <span id="current-date"></span>
+                </div>
+                <button class="btn-add" id="btn-nuevo-acta-global" onclick="openPanel()" style="display: flex; visibility: visible; opacity: 1; background: linear-gradient(135deg, #0d6e4e 0%, #0a523a 100%); color: white; padding: 12px 24px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; align-items: center; gap: 10px; font-size: 14px; white-space: nowrap; box-shadow: 0 4px 12px rgba(13, 110, 78, 0.2); z-index: 1000;">
+                    <i class="fas fa-plus"></i> Añadir Registro
+                </button>
+            </header>
+
+            <main class="content-area">
+                <div class="section-header">
+                    <h1 id="section-title">Gestión de Bautizos</h1>
+                    <p id="section-desc">Lleva un registro detallado de las actas de bautismo celebradas.</p>
+                </div>
+
+                <div class="controls" id="crud-controls" style="display: flex; gap: 20px; align-items: center; margin-bottom: 30px;">
+                    <div class="search-container" style="width: 500px; flex-shrink: 0; position: relative;">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="main-search" placeholder="Filtro rápido / Enter para búsqueda global...">
+                    </div>
+                </div>
+
+                <div id="dashboard-section" style="display: none;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-bottom: 40px;">
+                        <div class="dash-card">
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <div style="width: 70px; height: 70px; border-radius: 20px; background: #e0e7ff; color: #4f46e5; display: flex; justify-content: center; align-items: center; font-size: 28px; box-shadow: 0 8px 15px rgba(79, 70, 229, 0.15);">
+                                    <i class="fas fa-dove"></i>
+                                </div>
+                                <div>
+                                    <p style="margin: 0; color: #64748b; font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Confirmaciones</p>
+                                    <h3 id="dash-confirmaciones" style="margin: 5px 0 0 0; color: #1e293b; font-size: 2.2rem; font-weight: 800;">0</h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dash-card">
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <div style="width: 70px; height: 70px; border-radius: 20px; background: #f3e8ff; color: #9333ea; display: flex; justify-content: center; align-items: center; font-size: 28px; box-shadow: 0 8px 15px rgba(147, 51, 234, 0.15);">
+                                    <i class="fas fa-cross"></i>
+                                </div>
+                                <div>
+                                    <p style="margin: 0; color: #64748b; font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">1ra Comunión</p>
+                                    <h3 id="dash-comuniones" style="margin: 5px 0 0 0; color: #1e293b; font-size: 2.2rem; font-weight: 800;">0</h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dash-card">
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <div style="width: 70px; height: 70px; border-radius: 20px; background: #dcfce7; color: #16a34a; display: flex; justify-content: center; align-items: center; font-size: 28px; box-shadow: 0 8px 15px rgba(22, 163, 74, 0.15);">
+                                    <i class="fas fa-baby"></i>
+                                </div>
+                                <div>
+                                    <p style="margin: 0; color: #64748b; font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Bautizos</p>
+                                    <h3 id="dash-bautizos" style="margin: 5px 0 0 0; color: #1e293b; font-size: 2.2rem; font-weight: 800;">0</h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dash-card">
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <div style="width: 70px; height: 70px; border-radius: 20px; background: #fee2e2; color: #dc2626; display: flex; justify-content: center; align-items: center; font-size: 28px; box-shadow: 0 8px 15px rgba(220, 38, 38, 0.15);">
+                                    <i class="fas fa-heart"></i>
+                                </div>
+                                <div>
+                                    <p style="margin: 0; color: #64748b; font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Matrimonios</p>
+                                    <h3 id="dash-matrimonios" style="margin: 5px 0 0 0; color: #1e293b; font-size: 2.2rem; font-weight: 800;">0</h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dash-card">
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <div style="width: 70px; height: 70px; border-radius: 20px; background: #fef3c7; color: #d97706; display: flex; justify-content: center; align-items: center; font-size: 28px; box-shadow: 0 8px 15px rgba(217, 119, 6, 0.15);">
+                                    <i class="fas fa-hand-holding-usd"></i>
+                                </div>
+                                <div>
+                                    <p style="margin: 0; color: #64748b; font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Total Aportes</p>
+                                    <h3 id="dash-aportes" style="margin: 5px 0 0 0; color: #1e293b; font-size: 2.2rem; font-weight: 800;">$0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="balance-section" style="display: none; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
+                        <h3 style="margin:0; color: #1e293b; font-size: 1.25rem;"><i class="fas fa-chart-line" style="color: #10b981; margin-right: 10px;"></i>Análisis de Aportes</h3>
+                        <div id="balance-cards" style="display: flex; gap: 10px;">
+                            <!-- Dinámico -->
+                        </div>
+                    </div>
+                    <div style="height: 220px; width: 100%;">
+                        <canvas id="aportesChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="records-table">
+                        <thead>
+                            <tr id="table-headers">
+                                <!-- Dinámico -->
+                            </tr>
+                        </thead>
+                        <tbody id="records-body">
+                            <!-- Dinámico -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination-footer" id="pagination-controls" style="display: none; margin-top: 25px; display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 25px; border-radius: 16px; box-shadow: var(--shadow-sm);">
+                    <div class="pagination-info" style="color: var(--text-muted); font-size: 0.9rem;">
+                        Mostrando <span id="pag-range">0-0</span> de <span id="pag-total">0</span> registros
+                    </div>
+                    <div class="pagination-btns" style="display: flex; gap: 10px;">
+                        <button class="btn-secondary" id="btn-prev" onclick="changePage(-1)" style="padding: 8px 16px; border-radius: 8px;">
+                            <i class="fas fa-chevron-left"></i> Anterior
+                        </button>
+                        <button class="btn-secondary" id="btn-next" onclick="changePage(1)" style="padding: 8px 16px; border-radius: 8px;">
+                            Siguiente <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Right Side Panel -->
+        <aside id="side-panel" class="side-panel">
+            <div class="panel-content">
+                <div class="panel-header">
+                    <h2 id="panel-title">Nuevo Registro</h2>
+                    <button class="btn-close" onclick="closePanel()"><i class="fas fa-times"></i></button>
+                </div>
+                <form id="record-form">
+                    <div id="form-fields">
+                        <!-- Dinámico -->
+                    </div>
+                    <div class="panel-actions">
+                        <button type="button" class="btn-cancel" onclick="closePanel()">Cancelar</button>
+                        <button type="submit" class="btn-save">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Group Details Panel -->
+        <aside id="group-details-panel" class="side-panel">
+            <div class="panel-content">
+                <div class="panel-header">
+                    <h2>Detalles del Grupo</h2>
+                    <button class="btn-close" onclick="closeGroupDetails()"><i class="fas fa-times"></i></button>
+                </div>
+                <div style="padding: 20px 0;">
+                    <h3 id="group-details-name" style="margin-top:0; color:#1e293b; font-size:1.5rem;">Nombre Grupo</h3>
+                    <p id="group-details-desc" style="color:#64748b; margin-bottom: 25px;">Descripción</p>
+                    
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <h4 style="margin-top:0; color:#334155;"><i class="fas fa-user-plus" style="margin-right: 5px;"></i>Añadir Persona</h4>
+                        <form id="add-member-form" style="display:flex; gap:10px; margin-top:10px;">
+                            <input type="hidden" id="current-group-id">
+                            <input type="hidden" id="current-group-id">
+                            <input type="text" id="add-member-name" list="personas-list" placeholder="Nombre completo de la persona" required style="flex:1; padding:10px; border:1px solid #cbd5e1; border-radius:5px; font-family:inherit;">
+                            <button type="submit" style="background:#10b981; color:white; border:none; border-radius:5px; padding:0 15px; cursor:pointer;"><i class="fas fa-plus"></i></button>
+                        </form>
+                    </div>
+
+                    <h4 style="margin-top:25px; color:#334155; border-bottom:1px solid #e2e8f0; padding-bottom:10px;"><i class="fas fa-users" style="margin-right:8px;"></i>Miembros Actuales</h4>
+                    <ul id="group-members-list" style="list-style:none; padding:0; margin:0; margin-top:10px; max-height: 300px; overflow-y: auto;">
+                        <!-- dynamic -->
+                    </ul>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modal for details -->
+    <div id="details-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative;">
+            <div style="padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; border-radius: 12px 12px 0 0;">
+                <h2 id="modal-title" style="margin: 0; color: #1e293b; font-size: 1.5rem;"><i class="fas fa-file-alt" style="color: #0d6e4e; margin-right: 10px;"></i>Detalles</h2>
+                <button onclick="closeDetailsModal()" style="background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modal-content" style="padding: 25px;"></div>
+            <div style="padding: 15px 25px; border-top: 1px solid #e2e8f0; text-align: right; position: sticky; bottom: 0; background: white; border-radius: 0 0 12px 12px;">
+                <button onclick="closeDetailsModal()" style="background: #e2e8f0; color: #475569; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;"></div>
+
+    <datalist id="personas-list"></datalist>
+    <datalist id="sacerdotes-list"></datalist>
+    <datalist id="sacerdotes-nombres-list"></datalist>
+
+    <script src="script.js?v=3.8"></script>
+</body>
+</html>
