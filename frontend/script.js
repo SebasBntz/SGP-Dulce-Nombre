@@ -609,26 +609,21 @@ async function performBackup() {
                 return; // El usuario canceló la selección de carpeta
             }
             
-            showLoading("Creando respaldo en proceso...");
-            
-            // Llamar al backend para hacer la copia
-            const response = await fetch(`${API_BASE}/parroquia/db/backup?destination_dir=${encodeURIComponent(folderPath)}`, {
-                method: 'POST',
-                headers: getAuthHeaders()
+            // Llamar al backend para hacer la copia usando authFetch
+            const response = await authFetch(`${API_BASE}/parroquia/db/backup?destination_dir=${encodeURIComponent(folderPath)}`, {
+                method: 'POST'
             });
             
             const data = await response.json();
-            hideLoading();
             
             if (response.ok) {
-                showSuccessMessage("¡Respaldo exitoso! Archivo guardado en: " + folderPath);
+                alert("¡Respaldo exitoso!\n\nArchivo guardado en:\n" + folderPath);
             } else {
-                showErrorMessage("Error: " + (data.detail || "No se pudo crear el respaldo"));
+                alert("Error: " + (data.detail || "No se pudo crear el respaldo"));
             }
         } catch (error) {
             console.error(error);
-            hideLoading();
-            showErrorMessage("Error de conexión al intentar crear el respaldo.");
+            alert("Error de conexión al intentar crear el respaldo.");
         }
     } else {
         alert("Esta función solo está disponible instalando la aplicación de escritorio.");
