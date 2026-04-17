@@ -9,6 +9,13 @@ class UsuarioRol(str, enum.Enum):
     SECRETARIA = "secretaria"
     ADMIN = "admin"
 
+class PasswordResetPin(Base):
+    __tablename__ = "password_resets"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), index=True, nullable=False)
+    pin = Column(String(6), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+
 class Perfil(Base):
     __tablename__ = "perfiles"
     id_perfil = Column(Integer, primary_key=True, index=True)

@@ -1,5 +1,5 @@
 const API_BASE = '/api/v1';
-let authToken = localStorage.getItem('parroquia_token');
+let authToken = sessionStorage.getItem('parroquia_token');
 
 // Auth Guard: If no token, redirect to login
 if (!authToken && !window.location.pathname.endsWith('login.html')) {
@@ -27,7 +27,7 @@ async function authFetch(url, options = {}) {
 
 function logout() {
     authToken = null;
-    localStorage.removeItem('parroquia_token');
+    sessionStorage.removeItem('parroquia_token');
     showToast('Sesión cerrada correctamente', 'success');
     setTimeout(() => {
         window.location.href = 'login.html';

@@ -599,3 +599,38 @@ function renderChart(data) {
         }
     });
 }
+
+// --- Respaldo de Base de Datos ---
+async function performBackup() {
+    if (window.electronAPI && window.electronAPI.selectFolder) {
+        try {
+            const folderPath = await window.electronAPI.selectFolder();
+            if (!folderPath) {
+                return; // El usuario canceló la selección de carpeta
+            }
+            
+            showLoading("Creando respaldo en proceso...");
+            
+            // Llamar al backend para hacer la copia
+            const response = await fetch(`${API_BASE}/parroquia/db/backup?destination_dir=${encodeURIComponent(folderPath)}`, {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
+            
+            const data = await response.json();
+            hideLoading();
+            
+            if (response.ok) {
+                showSuccessMessage("¡Respaldo exitoso! Archivo guardado en: " + folderPath);
+            } else {
+                showErrorMessage("Error: " + (data.detail || "No se pudo crear el respaldo"));
+            }
+        } catch (error) {
+            console.error(error);
+            hideLoading();
+            showErrorMessage("Error de conexión al intentar crear el respaldo.");
+        }
+    } else {
+        alert("Esta función solo está disponible instalando la aplicación de escritorio.");
+    }
+}

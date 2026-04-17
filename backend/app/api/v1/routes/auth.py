@@ -12,8 +12,9 @@ from app.schemas.token import AuthResponse
 from app.schemas.user import UsuarioCreate, UsuarioResponse, ForgotPasswordRequest, ResetPassword
 from app.repositories import user as user_repo
 from app.services import email_service
-
-
+from app.models.all_models import PasswordResetPin
+import random
+from datetime import datetime, timezone
 class LoginRequest(BaseModel):
     """Esquema para capturar las credenciales de inicio de sesión."""
     email: EmailStr
@@ -69,12 +70,6 @@ def register_user(
 
     user = user_repo.create(db, obj_in=user_in)
 
-    # Intento de envío de email de bienvenida
-    try:
-        email_service.send_welcome_email(user.email, user.nombre_completo)
-    except Exception as e:
-        print(f"Error enviando correo de bienvenida: {e}")
-
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
         {"sub": user.email, "id": user.usuario_id, "role": user.rol},
@@ -95,20 +90,24 @@ def forgot_password(
     req: ForgotPasswordRequest
 ) -> Any:
     """
-    Solicita un enlace de recuperación de contraseña.
+    Solicita un PIN de recuperación de contraseña de 6 dígitos.
     """
     try:
         user = user_repo.get_by_email(db, email=req.email)
         if not user:
             return {"message": "Si el usuario existe, se ha enviado un correo de recuperación."}
 
-        reset_token_expires = timedelta(minutes=15)
-        reset_token = security.create_access_token(
-            {"sub": user.email, "type": "reset"},
-            expires_delta=reset_token_expires,
-        )
+        pin = f"{random.randint(100000, 999999)}"
+        expires = datetime.now(timezone.utc) + timedelta(minutes=15)
+        
+        # Eliminar PINs anteriores del mismo correo
+        db.query(PasswordResetPin).filter(PasswordResetPin.email == user.email).delete()
+        
+        reset_entry = PasswordResetPin(email=user.email, pin=pin, expires_at=expires)
+        db.add(reset_entry)
+        db.commit()
 
-        email_service.send_password_reset_email(user.email, reset_token)
+        email_service.send_password_reset_email(user.email, pin)
 
         return {"message": "Si el usuario existe, se ha enviado un correo de recuperación."}
     except Exception as e:
@@ -123,18 +122,33 @@ def reset_password(
     req: ResetPassword
 ) -> Any:
     """
-    Valida el token de recuperación y actualiza la contraseña del usuario.
+    Valida el PIN de recuperación y actualiza la contraseña del usuario.
     """
     try:
-        payload = security.decode_token(req.token)
-        if not payload or payload.get("type") != "reset":
+        pin_entry = db.query(PasswordResetPin).filter(
+            PasswordResetPin.email == req.email,
+            PasswordResetPin.pin == req.token
+        ).first()
+
+        # Evitar comparar fechas naive con aware, convertir expires_at a aware si es naive
+        # o comparar si expiro:
+        if not pin_entry:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Token de recuperación inválido o expirado",
+                detail="PIN inválido",
+            )
+            
+        current_time = datetime.now(timezone.utc)
+        if pin_entry.expires_at.tzinfo is None:
+             current_time = datetime.utcnow()
+             
+        if pin_entry.expires_at < current_time:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El PIN ha expirado",
             )
 
-        email = payload.get("sub")
-        user = user_repo.get_by_email(db, email=email)
+        user = user_repo.get_by_email(db, email=req.email)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -142,6 +156,8 @@ def reset_password(
             )
 
         user.password_hash = security.get_password_hash(req.new_password)
+        db.query(PasswordResetPin).filter(PasswordResetPin.email == req.email).delete()
+        
         db.add(user)
         db.commit()
         db.refresh(user)

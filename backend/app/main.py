@@ -16,11 +16,38 @@ from app.models.all_models import Base
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app")
 
+from app.core.security import get_password_hash
+from app.models.all_models import Usuario, UsuarioRol
+from app.db.session import SessionLocal
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Ensure tables exist
     logger.info("Initializing database...")
     Base.metadata.create_all(bind=engine)
+    
+    # Auto-create admin if database is empty (First Run Scenario)
+    db = SessionLocal()
+    try:
+        admin_exists = db.query(Usuario).first()
+        if not admin_exists:
+            logger.info("First run detected. Creating default admin user...")
+            default_admin = Usuario(
+                email="admin@parroquia.com",
+                password_hash=get_password_hash("admin123456"),
+                nombre_completo="Administrador Maestro",
+                rol=UsuarioRol.ADMIN,
+                is_active=True,
+                activo=True,
+                usuario="admin"
+            )
+            db.add(default_admin)
+            db.commit()
+    except Exception as e:
+        logger.error(f"Error creating default admin: {e}")
+    finally:
+        db.close()
+        
     yield
     # Shutdown: Clean up if needed
     logger.info("Shutting down...")

@@ -2,7 +2,7 @@ const API_BASE = '/api/v1';
 
 window.addEventListener('load', () => {
     // If already logged in, go to dashboard
-    if (localStorage.getItem('parroquia_token')) {
+    if (sessionStorage.getItem('parroquia_token')) {
         window.location.href = 'index.html';
     }
 });
@@ -32,7 +32,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
         if (response.ok) {
             const data = await response.json();
-            localStorage.setItem('parroquia_token', data.access_token);
+            sessionStorage.setItem('parroquia_token', data.access_token);
             
             // Success animation or redirect
             window.location.href = 'index.html';
@@ -49,5 +49,99 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         btn.disabled = false;
         btnText.style.display = 'block';
         loader.style.display = 'none';
+    }
+});
+
+// --- View Toggling Logic ---
+const viewLogin = document.getElementById('view-login');
+const viewForgot = document.getElementById('view-forgot');
+const viewReset = document.getElementById('view-reset');
+
+document.getElementById('link-forgot-password').addEventListener('click', (e) => {
+    e.preventDefault();
+    viewLogin.style.display = 'none';
+    viewForgot.style.display = 'block';
+});
+
+document.getElementById('link-back-login').addEventListener('click', (e) => {
+    e.preventDefault();
+    viewForgot.style.display = 'none';
+    viewLogin.style.display = 'block';
+});
+
+document.getElementById('link-back-login-2').addEventListener('click', (e) => {
+    e.preventDefault();
+    viewReset.style.display = 'none';
+    viewLogin.style.display = 'block';
+});
+
+// --- Forgot Password Logic ---
+let resetEmail = "";
+
+document.getElementById('forgot-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    resetEmail = document.getElementById('forgot-email').value;
+    const btn = document.getElementById('btn-forgot');
+    const text = document.getElementById('btn-forgot-text');
+    
+    btn.disabled = true;
+    text.innerText = "Enviando...";
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: resetEmail })
+        });
+        
+        // Go to reset UI regardless of response status to prevent email enumeration
+        viewForgot.style.display = 'none';
+        viewReset.style.display = 'block';
+    } catch (err) {
+        alert("Error de conexión al servidor");
+    } finally {
+        btn.disabled = false;
+        text.innerText = "Enviar PIN";
+    }
+});
+
+// --- Reset Password Logic ---
+document.getElementById('reset-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pin = document.getElementById('reset-pin').value;
+    const newPassword = document.getElementById('reset-password').value;
+    const btn = document.getElementById('btn-reset');
+    const text = document.getElementById('btn-reset-text');
+    
+    btn.disabled = true;
+    text.innerText = "Cambiando...";
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                email: resetEmail,
+                token: pin,
+                new_password: newPassword
+            })
+        });
+
+        if (response.ok) {
+            alert("Contraseña creada exitosamente. ¡Ya puedes iniciar sesión!");
+            viewReset.style.display = 'none';
+            viewLogin.style.display = 'block';
+            document.getElementById('login-email').value = resetEmail;
+            document.getElementById('login-password').value = "";
+            document.getElementById('login-password').focus();
+        } else {
+            const errData = await response.json();
+            alert("Error: " + (errData.detail || "PIN inválido o expirado"));
+        }
+    } catch (err) {
+        alert("Error de conexión al servidor");
+    } finally {
+        btn.disabled = false;
+        text.innerText = "Cambiar Contraseña";
     }
 });

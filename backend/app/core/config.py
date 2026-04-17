@@ -14,13 +14,19 @@ class Settings(BaseSettings):
     
     @property
     def BASE_DATA_DIR(self) -> str:
-        if getattr(sys, 'frozen', False):
-            app_data = os.getenv('APPDATA')
-            base_dir = os.path.join(app_data, "SistemaParroquia")
-            if not os.path.exists(base_dir):
+        # Guardar siempre en Documentos/Datos Parroquia para fácil respaldo por la secretaria
+        documents_path = os.path.join(os.path.expanduser("~"), "Documents")
+        base_dir = os.path.join(documents_path, "Datos Parroquia")
+        if not os.path.exists(base_dir):
+            try:
                 os.makedirs(base_dir)
-            return base_dir
-        return os.path.abspath(".")
+            except Exception:
+                pass
+        
+        # En caso de error, el fallback es la carpeta actual
+        if not os.path.exists(base_dir):
+            return os.path.abspath(".")
+        return base_dir
 
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
@@ -33,6 +39,15 @@ class Settings(BaseSettings):
 
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["*"]
+
+    # Correos (SMTP)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = "sistemas.parroquial.sb@gmail.com"
+    SMTP_PASSWORD: str = "kidzrxpykrmoztsp"
+    SMTP_TLS: bool = True
+    EMAILS_FROM_EMAIL: str = "sistemas.parroquial.sb@gmail.com"
+    EMAILS_FROM_NAME: str = "Parroquia Dulce Nombre"
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 

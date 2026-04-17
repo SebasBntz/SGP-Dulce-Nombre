@@ -15,7 +15,7 @@ def create_admin():
     db = SessionLocal()
     try:
         # Check if admin already exists
-        admin_email = "admin@parroquia.com"
+        admin_email = "sebastianjey@gmail.com"
         existing_user = db.query(Usuario).filter(Usuario.email == admin_email).first()
         
         if existing_user:
@@ -30,7 +30,7 @@ def create_admin():
             rol=UsuarioRol.ADMIN,
             is_active=True,
             activo=True,
-            usuario="admin"
+            usuario="admin_sebastian"
         )
         
         db.add(new_admin)

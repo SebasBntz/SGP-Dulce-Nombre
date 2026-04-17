@@ -197,15 +197,17 @@
         <div class="church-icon-box">
             <i class="fas fa-church"></i>
         </div>
-        <h1>Bienvenido</h1>
-        <p class="subtitle">Ingrese sus datos para acceder al sistema parroquial</p>
+        <!-- VIEW LOGIN -->
+        <div id="view-login">
+            <h1>Bienvenido</h1>
+            <p class="subtitle">Ingrese sus datos para acceder al sistema parroquial</p>
 
-        <div id="login-error" class="error-msg" style="display: none;">
-            <i class="fas fa-exclamation-circle"></i>
-            Credenciales incorrectas
-        </div>
+            <div id="login-error" class="error-msg" style="display: none;">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="login-error-text">Credenciales incorrectas</span>
+            </div>
 
-        <form id="login-form">
+            <form id="login-form">
             <div class="form-group">
                 <label for="login-email">Correo Electrónico</label>
                 <div class="input-wrapper">
@@ -214,19 +216,73 @@
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="login-password">Contraseña</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+                <div class="form-group">
+                    <label for="login-password">Contraseña</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
                 </div>
-            </div>
 
-            <button type="submit" class="btn-login" id="btn-login">
-                <span id="btn-text">Iniciar Sesión</span>
-                <div class="loader" id="login-loader" style="display: none;"></div>
-            </button>
-        </form>
+                <div style="text-align: right; margin-bottom: 24px;">
+                    <a href="#" id="link-forgot-password" style="font-size: 13px; color: var(--primary); font-weight: 600; text-decoration: none;">¿Olvidaste tu contraseña?</a>
+                </div>
+
+                <button type="submit" class="btn-login" id="btn-login">
+                    <span id="btn-text">Iniciar Sesión</span>
+                    <div class="loader" id="login-loader" style="display: none;"></div>
+                </button>
+            </form>
+        </div>
+
+        <!-- VIEW FORGOT PWD -->
+        <div id="view-forgot" style="display: none;">
+            <h1>Recuperar Acceso</h1>
+            <p class="subtitle">Te enviaremos un PIN de 6 dígitos al correo</p>
+            <form id="forgot-form">
+                <div class="form-group">
+                    <label for="forgot-email">Correo de tu cuenta</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="forgot-email" placeholder="correo@ejemplo.com" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-login" id="btn-forgot">
+                    <span id="btn-forgot-text">Enviar PIN</span>
+                </button>
+                <div style="text-align: center; margin-top: 15px;">
+                    <a href="#" id="link-back-login" style="font-size: 13px; color: var(--text-muted); text-decoration: underline;">Volver</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- VIEW RESET PWD -->
+        <div id="view-reset" style="display: none;">
+            <h1>Nuevo Acceso</h1>
+            <p class="subtitle">Ingresa el PIN que te llegó al correo</p>
+            <form id="reset-form">
+                <div class="form-group">
+                    <label>PIN de Seguridad (6 dígitos)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-key"></i>
+                        <input type="text" id="reset-pin" placeholder="123456" required maxlength="6">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Nueva Contraseña</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="reset-password" placeholder="Mínimo 6 caracteres" required minlength="6">
+                    </div>
+                </div>
+                <button type="submit" class="btn-login" id="btn-reset">
+                    <span id="btn-reset-text">Cambiar Contraseña</span>
+                </button>
+                <div style="text-align: center; margin-top: 15px;">
+                    <a href="#" id="link-back-login-2" style="font-size: 13px; color: var(--text-muted); text-decoration: underline;">Cancelar</a>
+                </div>
+            </form>
+        </div>
 
         <div class="card-footer">
             <p>&copy; 2026 Parroquia Dulce Nombre de Jesús</p>

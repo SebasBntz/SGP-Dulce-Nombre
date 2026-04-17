@@ -25,6 +25,7 @@ class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 class ResetPassword(BaseModel):
+    email: EmailStr
     token: str
     new_password: str
 
