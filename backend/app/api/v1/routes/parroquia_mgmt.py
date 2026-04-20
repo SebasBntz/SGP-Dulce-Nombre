@@ -183,19 +183,44 @@ def add_persona_to_grupo(id_grupo: int, gp: GrupoPersonaCreate, db: Session = De
     return nuevo_miembro
 
 # --- Aportes ---
-@router.get("/aportes/balance", response_model=List[Dict[str, Any]])
+@router.get("/aportes/balance", response_model=Dict[str, Any])
 def get_aportes_balance(db: Session = Depends(get_db)):
-    # Using strftime for SQLite compatibility
-    resultados = (
+    # Totales por mes
+    resultados_mes = (
         db.query(
             func.strftime('%Y-%m', Aporte.fecha).label('mes'),
             func.sum(Aporte.monto).label('total')
         )
         .group_by(func.strftime('%Y-%m', Aporte.fecha))
-        .order_by(func.strftime('%Y-%m', Aporte.fecha).desc())
+        .order_by(func.strftime('%Y-%m', Aporte.fecha).asc()) # Ascendente para el gráfico
         .all()
     )
-    return [{"mes": r.mes if r.mes else "S/F", "total": float(r.total) if r.total else 0.0} for r in resultados]
+    
+    # Desglose por tipo
+    desglose_tipo = (
+        db.query(
+            Aporte.tipo,
+            func.sum(Aporte.monto).label('total')
+        )
+        .group_by(Aporte.tipo)
+        .all()
+    )
+    
+    # Estadísticas rápidas
+    total_historico = db.query(func.sum(Aporte.monto)).scalar() or 0.0
+    promedio_mensual = 0.0
+    if resultados_mes:
+        promedio_mensual = total_historico / len(resultados_mes)
+    
+    return {
+        "mensual": [{"mes": r.mes if r.mes else "S/F", "total": float(r.total)} for r in resultados_mes],
+        "por_tipo": [{"tipo": r.tipo, "total": float(r.total)} for r in desglose_tipo],
+        "stats": {
+            "total_historico": float(total_historico),
+            "promedio_mensual": float(promedio_mensual),
+            "conteo_meses": len(resultados_mes)
+        }
+    }
 
 @router.get("/aportes/", response_model=Any)
 def read_aportes(

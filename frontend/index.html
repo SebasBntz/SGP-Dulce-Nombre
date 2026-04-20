@@ -127,15 +127,43 @@
                     </div>
                 </div>
 
-                <div id="balance-section" style="display: none; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
-                        <h3 style="margin:0; color: #1e293b; font-size: 1.25rem;"><i class="fas fa-chart-line" style="color: #10b981; margin-right: 10px;"></i>Análisis de Aportes</h3>
-                        <div id="balance-cards" style="display: flex; gap: 10px;">
-                            <!-- Dinámico -->
+                <div id="balance-section" style="display: none; background: #fff; padding: 30px; border-radius: 16px; box-shadow: var(--shadow-md); margin-bottom: 30px; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;">
+                        <h3 style="margin:0; color: #0f172a; font-size: 1.4rem; font-weight: 800;"><i class="fas fa-chart-pie" style="color: #0d6e4e; margin-right: 12px;"></i>Análisis Financiero de Aportes</h3>
+                        <div id="balance-last-month" style="font-weight: 700; color: #0d6e4e; background: #dcfce7; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem;"></div>
+                    </div>
+                    
+                    <!-- Summary Mini Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #f1f5f9; text-align: center;">
+                            <p style="margin:0; font-size: 0.8rem; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Recaudación Total</p>
+                            <h4 id="stat-total-historico" style="margin:8px 0 0 0; font-size: 1.5rem; color: #0f172a; font-weight: 800;">$0</h4>
+                        </div>
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #f1f5f9; text-align: center;">
+                            <p style="margin:0; font-size: 0.8rem; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Promedio Mensual</p>
+                            <h4 id="stat-promedio-mensual" style="margin:8px 0 0 0; font-size: 1.5rem; color: #0d6e4e; font-weight: 800;">$0</h4>
+                        </div>
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #f1f5f9; text-align: center;">
+                            <p style="margin:0; font-size: 0.8rem; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Meses Registrados</p>
+                            <h4 id="stat-conteo-meses" style="margin:8px 0 0 0; font-size: 1.5rem; color: #0f172a; font-weight: 800;">0</h4>
                         </div>
                     </div>
-                    <div style="height: 220px; width: 100%;">
-                        <canvas id="aportesChart"></canvas>
+
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+                        <!-- Line/Bar Chart -->
+                        <div style="background: white; border-radius: 12px; padding: 20px; border: 1px solid #f1f5f9; overflow-x: auto;">
+                            <p style="margin:0 0 15px 0; font-weight: 700; color: #475569; font-size: 0.9rem;">Tendencia de Ingresos</p>
+                            <div style="height: 280px; min-width: 100%;">
+                                <canvas id="aportesChart"></canvas>
+                            </div>
+                        </div>
+                        <!-- Pie Chart -->
+                        <div style="background: white; border-radius: 12px; padding: 20px; border: 1px solid #f1f5f9;">
+                            <p style="margin:0 0 15px 0; font-weight: 700; color: #475569; font-size: 0.9rem;">Distribución por Tipo</p>
+                            <div style="height: 280px; width: 100%;">
+                                <canvas id="aportesPieChart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -238,6 +266,6 @@
     <datalist id="sacerdotes-list"></datalist>
     <datalist id="sacerdotes-nombres-list"></datalist>
 
-    <script src="script.js?v=3.8"></script>
+    <script src="script.js?v=3.9"></script>
 </body>
 </html>

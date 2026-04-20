@@ -1,6 +1,7 @@
 // Depends on auth.js for authentication and authFetch
 let currentSection = 'dashboard';
 let aportesChart = null;
+let aportesPieChart = null;
 let currentEditingId = null;
 let currentSearchQuery = '';
 let searchTimeout = null;
@@ -547,55 +548,133 @@ async function loadBalance() {
     try {
         const res = await authFetch(`${API_BASE}/parroquia/aportes/balance?_=${Date.now()}`);
         const data = await res.json();
-        const cardContainer = document.getElementById('balance-cards');
         
-        if (cardContainer) {
-            if (data && data.length > 0) {
-                const total = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(data[0].total);
-                cardContainer.innerHTML = `<div class="balance-badge">Último Mes: <strong>${total}</strong></div>`;
-            } else {
-                cardContainer.innerHTML = '<div class="muted">Sin datos</div>';
-            }
+        // Update Summary Stats
+        const formatCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v);
+        
+        if (data.stats) {
+            document.getElementById('stat-total-historico').innerText = formatCOP(data.stats.total_historico);
+            document.getElementById('stat-promedio-mensual').innerText = formatCOP(data.stats.promedio_mensual);
+            document.getElementById('stat-conteo-meses').innerText = data.stats.conteo_meses;
         }
-        renderChart(data);
+
+        if (data.mensual && data.mensual.length > 0) {
+            const lastMonth = data.mensual[data.mensual.length - 1];
+            document.getElementById('balance-last-month').innerText = `Último Mes: ${formatCOP(lastMonth.total)}`;
+        } else {
+            document.getElementById('balance-last-month').innerText = 'Sin datos';
+        }
+
+        renderAportesCharts(data);
     } catch (e) {
         console.error("Balance Error:", e);
     }
 }
 
-function renderChart(data) {
-    const canvas = document.getElementById('aportesChart');
-    if (!canvas || !window.Chart) return;
+function renderAportesCharts(data) {
+    const ctxBar = document.getElementById('aportesChart')?.getContext('2d');
+    const ctxPie = document.getElementById('aportesPieChart')?.getContext('2d');
     
-    if (aportesChart) {
-        aportesChart.destroy();
-    }
+    if (!ctxBar || !ctxPie || !window.Chart) return;
     
-    if (!data || data.length === 0) return;
+    // Destroy previous instances
+    if (aportesChart) aportesChart.destroy();
+    if (aportesPieChart) aportesPieChart.destroy();
     
-    const labels = data.map(d => d.mes).reverse();
-    const values = data.map(d => d.total).reverse();
+    if (!data.mensual || data.mensual.length === 0) return;
+
+    // 1. Bar Chart (Tendencia) - Fixed width issue
+    const barLabels = data.mensual.map(d => d.mes);
+    const barValues = data.mensual.map(d => d.total);
     
-    aportesChart = new Chart(canvas.getContext('2d'), {
+    // Dynamic width calculation to prevent "getting too thin"
+    const minWidthPerMonth = 80;
+    const chartContainer = document.getElementById('aportesChart').parentElement;
+    const calculatedWidth = Math.max(chartContainer.parentElement.clientWidth - 40, barLabels.length * minWidthPerMonth);
+    document.getElementById('aportesChart').style.width = calculatedWidth + 'px';
+
+    aportesChart = new Chart(ctxBar, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: barLabels,
             datasets: [{
                 label: 'Ingresos Mensuales',
-                data: values,
-                backgroundColor: 'rgba(13, 110, 78, 0.7)',
-                borderColor: '#0d6e4e',
-                borderWidth: 1,
-                borderRadius: 8
+                data: barValues,
+                backgroundColor: 'rgba(13, 110, 78, 0.8)',
+                hoverBackgroundColor: '#0d6e4e',
+                borderRadius: 6,
+                maxBarThickness: 60, // Prevents "too wide" when only 1 month
+                barPercentage: 0.6,
+                categoryPercentage: 0.7
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: { 
-                y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } } 
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: '#f1f5f9' },
+                    ticks: { 
+                        callback: v => '$' + v.toLocaleString('es-CO'),
+                        font: { size: 11 }
+                    } 
+                },
+                x: { 
+                    grid: { display: false },
+                    ticks: { font: { size: 11, weight: '600' } }
+                }
             },
-            plugins: { legend: { display: false } }
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    padding: 12,
+                    titleFont: { size: 14 },
+                    bodyFont: { size: 13 },
+                    callbacks: {
+                        label: (ctx) => ` Monto: $${ctx.parsed.y.toLocaleString('es-CO')}`
+                    }
+                }
+            }
+        }
+    });
+
+    // 2. Pie Chart (Distribución)
+    if (!data.por_tipo || data.por_tipo.length === 0) return;
+    
+    const pieLabels = data.por_tipo.map(d => d.tipo);
+    const pieValues = data.por_tipo.map(d => d.total);
+    
+    aportesPieChart = new Chart(ctxPie, {
+        type: 'doughnut',
+        data: {
+            labels: pieLabels,
+            datasets: [{
+                data: pieValues,
+                backgroundColor: [
+                    '#0d6e4e', 
+                    '#10b981', 
+                    '#fca311', 
+                    '#4f46e5', 
+                    '#ef4444'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 10, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.label}: $${ctx.parsed.toLocaleString('es-CO')}`
+                    }
+                }
+            },
+            cutout: '70%'
         }
     });
 }
