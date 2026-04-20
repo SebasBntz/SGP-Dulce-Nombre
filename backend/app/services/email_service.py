@@ -1,12 +1,23 @@
 import logging
 import smtplib
+import sys
+import os
+from pathlib import Path
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
+
+def get_logo_path():
+    if getattr(sys, 'frozen', False):
+        root = Path(sys.executable).parent
+    else:
+        root = Path(__file__).resolve().parent.parent.parent.parent
+    return root / "frontend" / "assets" / "img" / "logo.png"
 
 def send_password_reset_email(email: str, token: str):
     """
@@ -17,8 +28,8 @@ def send_password_reset_email(email: str, token: str):
     <html>
     <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; padding: 40px 20px; margin: 0;">
         <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; text-align: center;">
-            <div style="width: 60px; height: 60px; background-color: #0d6e4e; color: white; border-radius: 16px; margin: 0 auto 20px; font-size: 30px; line-height: 60px; font-weight: bold;">
-                🔐
+            <div style="margin-bottom: 20px;">
+                <img src="cid:logo_parroquia" alt="Logo Parroquia" style="width: 120px; height: auto; border-radius: 50%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             </div>
             <h1 style="color: #0f172a; font-size: 24px; margin-bottom: 10px;">Recuperación de Acceso</h1>
             <p style="color: #475569; font-size: 16px; line-height: 1.5; margin-bottom: 25px; text-align: center;">
@@ -48,11 +59,26 @@ def send_password_reset_email(email: str, token: str):
         return
 
     try:
-        msg = MIMEMultipart()
+        msg = MIMEMultipart('related')
         msg['From'] = f"{settings.EMAILS_FROM_NAME} <{settings.EMAILS_FROM_EMAIL}>"
         msg['To'] = email
         msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'html'))
+
+        msg_alternative = MIMEMultipart('alternative')
+        msg.attach(msg_alternative)
+        msg_alternative.attach(MIMEText(body, 'html'))
+
+        # Adjuntar logo
+        logo_path = get_logo_path()
+        if logo_path.exists():
+            with open(logo_path, 'rb') as f:
+                img_data = f.read()
+            img = MIMEImage(img_data)
+            img.add_header('Content-ID', '<logo_parroquia>')
+            img.add_header('Content-Disposition', 'inline', filename='logo.png')
+            msg.attach(img)
+        else:
+            logger.warning(f"Logo no encontrado en {logo_path}")
 
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
             if settings.SMTP_TLS:
