@@ -33,13 +33,13 @@ async def lifespan(app: FastAPI):
         if not admin_exists:
             logger.info("First run detected. Creating default admin user...")
             default_admin = Usuario(
-                email="admin@parroquia.com",
+                email="sebastianjey@gmail.com",
                 password_hash=get_password_hash("admin123456"),
-                nombre_completo="Administrador Maestro",
+                nombre_completo="Administrador Parroquial",
                 rol=UsuarioRol.ADMIN,
                 is_active=True,
                 activo=True,
-                usuario="admin"
+                usuario="admin_sebastian"
             )
             db.add(default_admin)
             db.commit()
