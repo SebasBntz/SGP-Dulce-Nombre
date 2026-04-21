@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            background-color: transparent;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 40px;
+            width: 380px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            text-align: center;
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .logo-wrapper {
+            position: relative;
+            margin-bottom: 30px;
+        }
+        .logo-bg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, rgba(13, 110, 78, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+            z-index: 0;
+            animation: pulse 3s infinite ease-in-out;
+        }
+        .logo {
+            width: 160px;
+            height: 160px;
+            object-fit: contain; /* Prevent stretching */
+            z-index: 1;
+            position: relative;
+            background: transparent;
+            padding: 0;
+        }
+        .title {
+            color: #0d6e4e;
+            font-size: 26px;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #0d6e4e 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: #64748b;
+            font-size: 14px;
+            margin: 8px 0 0 0;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+        .loader-container {
+            margin-top: 35px;
+            width: 220px;
+            background: #f1f5f9;
+            height: 6px;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        .loader-bar {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(90deg, #0d6e4e, #158a62, #0d6e4e);
+            background-size: 200% 100%;
+            width: 100%;
+            border-radius: 10px;
+            animation: loadingMove 2s infinite linear;
+        }
+        .status {
+            margin-top: 20px;
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+        }
+        @keyframes loadingMove {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-card">
+        <div class="logo-wrapper">
+            <div class="logo-bg"></div>
+            <img src="logo.png" class="logo" alt="Logo">
+        </div>
+        <h1 class="title">SGP - Dulce Nombre</h1>
+        <p class="subtitle">Sistema de Gestión Parroquial</p>
+        
+        <div class="loader-container">
+            <div class="loader-bar"></div>
+        </div>
+        <div class="status" id="status">Iniciando sistema...</div>
+    </div>
+</body>
+</html>

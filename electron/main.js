@@ -5,8 +5,9 @@ const { exec, spawn } = require('child_process');
 const axios = require('axios');
 
 let mainWindow;
+let splashWindow;
 let backendProcess;
-let backendErrors = []; // Capturar errores del backend para mostrarlos
+let backendErrors = [];
 
 // Archivo de log para diagnóstico
 const logFile = path.join(app.getPath('userData'), 'sgp-log.txt');
@@ -17,35 +18,48 @@ function log(msg) {
   try { fs.appendFileSync(logFile, line); } catch(e) {}
 }
 
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 500,
+    height: 600,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    show: false, // Start hidden to prevent flickering
+    center: true,
+    backgroundColor: '#00000000', // Fully transparent background
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+  
+  splashWindow.loadFile(path.join(__dirname, 'splash.html'));
+  
+  // Only show when content is ready
+  splashWindow.once('ready-to-show', () => {
+    splashWindow.show();
+  });
+
+  splashWindow.on('closed', () => (splashWindow = null));
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 850,
     title: "SGP - Dulce Nombre de Jesús",
-    backgroundColor: '#f0f2f5',
+    backgroundColor: '#ffffff',
+    show: false, // Don't show until ready
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
       devTools: !app.isPackaged
-    },
-    show: true
+    }
   });
 
-  // Pantalla de carga con spinner
-  mainWindow.loadURL('data:text/html;charset=utf-8,' + encodeURI(`
-    <html>
-      <body style="background: #f0f2f5; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Segoe UI', sans-serif; color: #0d6e4e; margin: 0;">
-        <div style="font-size: 28px; font-weight: bold; margin-bottom: 10px;">SGP - Dulce Nombre</div>
-        <div style="font-size: 14px; color: #666; margin-bottom: 30px;">Sistema de Gestión Parroquial</div>
-        <div style="width: 50px; height: 50px; border: 5px solid #e0e0e0; border-top-color: #fca311; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        <div style="margin-top: 20px; font-size: 13px; color: #888;" id="status">Iniciando servidor...</div>
-        <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
-      </body>
-    </html>
-  `));
-
-  // Chequeo de salud del backend - 60 intentos x 1s = 60 segundos de espera
+  // Health check loop
   let attempts = 0;
   const maxAttempts = 60;
   const checkBackend = setInterval(async () => {
@@ -53,19 +67,35 @@ function createWindow() {
     try {
       await axios.get('http://127.0.0.1:8000/health', { timeout: 2000 });
       log('Backend is ready!');
-      mainWindow.loadURL('http://127.0.0.1:8000/');
       clearInterval(checkBackend);
+      
+      // Load the app
+      mainWindow.loadURL('http://127.0.0.1:8000/');
+      
+      // Once the page is loaded, show the window and close splash
+      mainWindow.once('ready-to-show', () => {
+        setTimeout(() => {
+          if (splashWindow) splashWindow.close();
+          mainWindow.show();
+          mainWindow.focus();
+        }, 500); // Small extra delay for smoothness
+      });
+
     } catch (e) {
       log(`Health check attempt ${attempts}/${maxAttempts} failed`);
       if (attempts >= maxAttempts) {
         clearInterval(checkBackend);
+        if (splashWindow) splashWindow.close();
+        
         const errorDetail = backendErrors.length > 0
           ? `\n\nErrores del servidor:\n${backendErrors.slice(-5).join('\n')}`
           : '\n\nNo se recibieron errores del servidor.';
+        
         dialog.showErrorBox(
           "Error de Conexión",
           `El servidor no respondió después de ${maxAttempts} segundos.${errorDetail}\n\nRevise el archivo de log: ${logFile}`
         );
+        app.quit();
       }
     }
   }, 1000);
@@ -144,6 +174,7 @@ app.whenReady().then(() => {
 
   const { session } = require('electron');
   session.defaultSession.clearCache().then(() => {
+    createSplashWindow();
     createWindow();
   });
 
