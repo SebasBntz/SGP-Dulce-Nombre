@@ -25,7 +25,7 @@ class Perfil(Base):
 
 class Usuario(Base):
     __tablename__ = "usuarios"
-    usuario_id = Column(Integer, primary_key=True, index=True) # Mantener compatible con login actual si es posible
+    usuario_id = Column(Integer, primary_key=True) # Mantener compatible con login actual si es posible
     nombre_completo = Column(String(255), nullable=True) # Opcional según diagrama
     email = Column(String(255), unique=True, index=True, nullable=True) # Opcional según diagrama
     usuario = Column(String(50), unique=True, index=True) # Según diagrama 'Usuario'
@@ -41,7 +41,7 @@ class Usuario(Base):
 
 class Persona(Base):
     __tablename__ = "personas"
-    id_persona = Column(Integer, primary_key=True, index=True)
+    id_persona = Column(Integer, primary_key=True)
     nombres = Column(String(255), nullable=False)
     apellidos = Column(String(255), nullable=False)
     fecha_nacimiento = Column(Date)
@@ -57,7 +57,7 @@ class Persona(Base):
 
 class Sacerdote(Base):
     __tablename__ = "sacerdotes"
-    id_sacerdote = Column(Integer, primary_key=True, index=True)
+    id_sacerdote = Column(Integer, primary_key=True)
     nombres = Column(String(255), nullable=False)
     apellidos = Column(String(255), nullable=False)
     telefono = Column(String(50))
@@ -67,14 +67,14 @@ class Sacerdote(Base):
 
 class TipoSacramento(Base):
     __tablename__ = "tipos_sacramento"
-    id_tipo = Column(Integer, primary_key=True, index=True)
+    id_tipo = Column(Integer, primary_key=True)
     nombre = Column(String(100), nullable=False)
     
     sacramentos = relationship("Sacramento", back_populates="tipo_sacramento")
 
 class Sacramento(Base):
     __tablename__ = "sacramentos"
-    id_sacramento = Column(Integer, primary_key=True, index=True)
+    id_sacramento = Column(Integer, primary_key=True)
     id_persona = Column(Integer, ForeignKey("personas.id_persona"))
     id_tipo = Column(Integer, ForeignKey("tipos_sacramento.id_tipo"))
     id_sacerdote = Column(Integer, ForeignKey("sacerdotes.id_sacerdote"))
@@ -87,7 +87,7 @@ class Sacramento(Base):
 
 class Grupo(Base):
     __tablename__ = "grupos"
-    id_grupo = Column(Integer, primary_key=True, index=True)
+    id_grupo = Column(Integer, primary_key=True)
     nombre = Column(String(100), nullable=False)
     descripcion = Column(Text)
     
@@ -105,7 +105,7 @@ class GrupoPersona(Base):
 
 class GrupoAporte(Base):
     __tablename__ = "grupo_aportes"
-    id_grupo_aporte = Column(Integer, primary_key=True, index=True)
+    id_grupo_aporte = Column(Integer, primary_key=True)
     id_grupo = Column(Integer, ForeignKey("grupos.id_grupo"))
     id_persona = Column(Integer, ForeignKey("personas.id_persona"))
     monto = Column(Numeric(12, 2))
@@ -117,7 +117,7 @@ class GrupoAporte(Base):
 
 class Aporte(Base):
     __tablename__ = "aportes"
-    id_aporte = Column(Integer, primary_key=True, index=True)
+    id_aporte = Column(Integer, primary_key=True)
     id_persona = Column(Integer, ForeignKey("personas.id_persona"), nullable=True)
     monto = Column(Numeric(12, 2))
     fecha = Column(Date)
@@ -130,7 +130,7 @@ class Aporte(Base):
 
 class ActaBautizo(Base):
     __tablename__ = "actas_bautizo"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     nombre = Column(String(255), nullable=False)
     apellidos = Column(String(255), nullable=False)
     fecha_nacimiento = Column(Date)
@@ -157,7 +157,7 @@ class ActaBautizo(Base):
 
 class ActaMatrimonio(Base):
     __tablename__ = "actas_matrimonio"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     nombre_esposo = Column(String(255), nullable=False)
     apellidos_esposo = Column(String(255), nullable=False)
     padres_esposo = Column(String(255))
@@ -190,7 +190,7 @@ class ActaMatrimonio(Base):
 
 class ActaConfirmacion(Base):
     __tablename__ = "actas_confirmacion"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     nombre = Column(String(255), nullable=False)
     apellidos = Column(String(255), nullable=False)
     fecha_nacimiento = Column(Date)
@@ -215,7 +215,7 @@ class ActaConfirmacion(Base):
 
 class ActaComunion(Base):
     __tablename__ = "actas_comunion"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     nombre = Column(String(255), nullable=False)
     apellidos = Column(String(255), nullable=False)
     fecha_nacimiento = Column(Date)

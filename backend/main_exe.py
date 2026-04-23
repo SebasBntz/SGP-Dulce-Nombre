@@ -76,5 +76,5 @@ if __name__ == "__main__":
     if getattr(sys, 'frozen', False):
         perform_silent_backup()
     
-    # 4. Lanzar servidor
-    uvicorn.run(app, host="127.0.0.1", port=8000, reload=False)
+    # 4. Lanzar servidor en puerto 8080 para evitar conflictos
+    uvicorn.run(app, host="127.0.0.1", port=8080, reload=False)

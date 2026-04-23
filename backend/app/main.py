@@ -108,11 +108,17 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 # =============================================
 def get_project_root():
     if getattr(sys, 'frozen', False):
+        # En modo .exe, el frontend está en la misma carpeta que el ejecutable
         return Path(sys.executable).parent
+    # En modo desarrollo, subimos niveles desde app/main.py
     return Path(__file__).resolve().parent.parent.parent
 
 PROJECT_ROOT = get_project_root()
 frontend_path = PROJECT_ROOT / "frontend"
+
+# Fallback para modo empaquetado si no está al lado del exe
+if getattr(sys, 'frozen', False) and not frontend_path.is_dir():
+    frontend_path = Path(sys._MEIPASS) / "frontend"
 
 if frontend_path.is_dir():
     logger.info(f"Montando frontend desde: {frontend_path}")

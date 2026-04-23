@@ -25,9 +25,9 @@ function createSplashWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    show: false, // Start hidden to prevent flickering
+    show: false, // Regresamos al modo original para evitar parpadeos
     center: true,
-    backgroundColor: '#00000000', // Fully transparent background
+    backgroundColor: '#00000000', // Transparente de nuevo
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true
@@ -36,8 +36,8 @@ function createSplashWindow() {
   
   splashWindow.loadFile(path.join(__dirname, 'splash.html'));
   
-  // Only show when content is ready
   splashWindow.once('ready-to-show', () => {
+    log('Splash window ready to show');
     splashWindow.show();
   });
 
@@ -65,12 +65,12 @@ function createWindow() {
   const checkBackend = setInterval(async () => {
     attempts++;
     try {
-      await axios.get('http://127.0.0.1:8000/health', { timeout: 2000 });
+      await axios.get('http://127.0.0.1:8080/health', { timeout: 2000 });
       log('Backend is ready!');
       clearInterval(checkBackend);
       
       // Load the app
-      mainWindow.loadURL('http://127.0.0.1:8000/');
+      mainWindow.loadURL('http://127.0.0.1:8080/');
       
       // Once the page is loaded, show the window and close splash
       mainWindow.once('ready-to-show', () => {
@@ -125,7 +125,7 @@ app.whenReady().then(() => {
       command = devExe;
     } else {
       command = 'python';
-      args = ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8000'];
+      args = ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8080'];
       process.chdir(path.join(__dirname, '../backend'));
     }
   }

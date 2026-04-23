@@ -295,9 +295,18 @@ async function downloadPDF(id, section) {
         if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
+            
+            // Extract filename from Content-Disposition header if available
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = `partida_${section}_${id}.pdf`;
+            if (contentDisposition && contentDisposition.includes('filename=')) {
+                // Get value after filename= and remove quotes
+                filename = contentDisposition.split('filename=')[1].trim().replace(/["']/g, '');
+            }
+
             const a = document.createElement('a');
             a.href = url;
-            a.download = `acta_${section}_${id}.pdf`;
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             a.remove();

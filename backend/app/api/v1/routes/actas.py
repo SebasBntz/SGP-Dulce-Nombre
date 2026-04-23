@@ -57,10 +57,11 @@ def get_bautizo_pdf(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Acta no encontrada")
     
     pdf_content = pdf_service.generate_bautizo_pdf(acta)
+    filename = f"partida_bautismo_{acta.nombre}_{acta.apellidos}.pdf".replace(" ", "_").upper()
     return Response(
         content=pdf_content,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=acta_bautizo_{id}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
 @router.delete("/bautizos/{id}")
@@ -120,10 +121,11 @@ def get_matrimonio_pdf(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Acta no encontrada")
     
     pdf_content = pdf_service.generate_matrimonio_pdf(acta)
+    filename = f"partida_matrimonio_{acta.nombre_esposo}_y_{acta.nombre_esposa}.pdf".replace(" ", "_").upper()
     return Response(
         content=pdf_content,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=acta_matrimonio_{id}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
 @router.delete("/matrimonios/{id}")
@@ -180,10 +182,11 @@ def get_confirmacion_pdf(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Acta no encontrada")
     
     pdf_content = pdf_service.generate_confirmacion_pdf(acta)
+    filename = f"partida_confirmacion_{acta.nombre}_{acta.apellidos}.pdf".replace(" ", "_").upper()
     return Response(
         content=pdf_content,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=acta_confirmacion_{id}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
 @router.delete("/confirmaciones/{id}")
@@ -240,10 +243,11 @@ def get_comunion_pdf(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Acta no encontrada")
     
     pdf_content = pdf_service.generate_comunion_pdf(acta)
+    filename = f"partida_comunion_{acta.nombre}_{acta.apellidos}.pdf".replace(" ", "_").upper()
     return Response(
         content=pdf_content,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=acta_comunion_{id}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
 @router.delete("/comuniones/{id}")
