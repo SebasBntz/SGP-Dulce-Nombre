@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { exec, spawn } = require('child_process');
@@ -9,8 +9,9 @@ let splashWindow;
 let backendProcess;
 let backendErrors = [];
 
-// Archivo de log para diagnóstico
+// Log file - reset on each startup
 const logFile = path.join(app.getPath('userData'), 'sgp-log.txt');
+try { fs.writeFileSync(logFile, ''); } catch(e) {}
 
 function log(msg) {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
@@ -25,22 +26,16 @@ function createSplashWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    show: false, // Regresamos al modo original para evitar parpadeos
+    show: false,
     center: true,
-    backgroundColor: '#00000000', // Transparente de nuevo
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true
-    }
+    backgroundColor: '#00000000',
+    webPreferences: { nodeIntegration: false, contextIsolation: true }
   });
-  
   splashWindow.loadFile(path.join(__dirname, 'splash.html'));
-  
   splashWindow.once('ready-to-show', () => {
     log('Splash window ready to show');
     splashWindow.show();
   });
-
   splashWindow.on('closed', () => (splashWindow = null));
 }
 
@@ -48,9 +43,9 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 850,
-    title: "SGP - Dulce Nombre de Jesús",
+    title: 'SGP - Dulce Nombre de Jesús',
     backgroundColor: '#ffffff',
-    show: false, // Don't show until ready
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -59,131 +54,144 @@ function createWindow() {
     }
   });
 
-  // Health check loop
   let attempts = 0;
   const maxAttempts = 60;
+
   const checkBackend = setInterval(async () => {
     attempts++;
     try {
       await axios.get('http://127.0.0.1:8080/health', { timeout: 2000 });
       log('Backend is ready!');
       clearInterval(checkBackend);
-      
-      // Load the app
+
       mainWindow.loadURL('http://127.0.0.1:8080/');
-      
-      // Once the page is loaded, show the window and close splash
       mainWindow.once('ready-to-show', () => {
         setTimeout(() => {
           if (splashWindow) splashWindow.close();
           mainWindow.show();
           mainWindow.focus();
-        }, 500); // Small extra delay for smoothness
+        }, 500);
       });
 
     } catch (e) {
-      log(`Health check attempt ${attempts}/${maxAttempts} failed`);
+      log(`Health check ${attempts}/${maxAttempts} failed: ${e.message}`);
       if (attempts >= maxAttempts) {
         clearInterval(checkBackend);
         if (splashWindow) splashWindow.close();
-        
-        const errorDetail = backendErrors.length > 0
-          ? `\n\nErrores del servidor:\n${backendErrors.slice(-5).join('\n')}`
-          : '\n\nNo se recibieron errores del servidor.';
-        
+        const detail = backendErrors.length > 0
+          ? `\n\nErrores:\n${backendErrors.slice(-5).join('\n')}`
+          : '\n\nEl servidor no envió mensajes de error.';
         dialog.showErrorBox(
-          "Error de Conexión",
-          `El servidor no respondió después de ${maxAttempts} segundos.${errorDetail}\n\nRevise el archivo de log: ${logFile}`
+          'Error de Conexión',
+          `El servidor no respondió en ${maxAttempts} segundos.${detail}\n\nLog: ${logFile}`
         );
         app.quit();
       }
     }
   }, 1000);
-
-  if (!app.isPackaged) {
-    // mainWindow.webContents.openDevTools();
-  }
 }
 
-app.whenReady().then(() => {
-  log('--- App starting ---');
-  log(`App packaged: ${app.isPackaged}`);
-  log(`Resources path: ${process.resourcesPath}`);
+// Libera el puerto antes de arrancar — previene conflictos si la app se cerró mal
+function killPort(port, callback) {
+  log(`Clearing port ${port}...`);
+  // Busca PIDs en ese puerto y los mata
+  exec(
+    `netstat -ano | findstr :${port}`,
+    (err, stdout) => {
+      if (!stdout) {
+        log('Port already free.');
+        return setTimeout(callback, 200);
+      }
+      const lines = stdout.split('\n');
+      const pids = new Set();
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        const pid = parts[parts.length - 1];
+        if (pid && /^\d+$/.test(pid) && pid !== '0') pids.add(pid);
+      }
+      if (pids.size === 0) {
+        log('No PIDs found on port.');
+        return setTimeout(callback, 200);
+      }
+      let pending = pids.size;
+      for (const pid of pids) {
+        log(`Killing PID ${pid} on port ${port}`);
+        exec(`taskkill /F /PID ${pid}`, () => {
+          pending--;
+          if (pending === 0) setTimeout(callback, 500); // Esperar 500ms para liberar el socket
+        });
+      }
+    }
+  );
+}
 
-  let command;
-  let args = [];
+// SIEMPRE usar spawn (no execFile) — execFile bloquea indefinidamente en servidores
+function startBackend(command, args) {
+  log(`Spawning backend: ${command} ${args.join(' ')}`);
+
+  backendProcess = spawn(command, args, {
+    shell: false,
+    detached: false,
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  log(`Backend PID: ${backendProcess.pid}`);
+
+  backendProcess.stdout.on('data', (d) => log(`Backend OUT: ${d.toString().trim()}`));
+  backendProcess.stderr.on('data', (d) => {
+    const msg = d.toString().trim();
+    log(`Backend ERR: ${msg}`);
+    backendErrors.push(msg);
+  });
+  backendProcess.on('error', (err) => {
+    log(`Backend spawn error: ${err.message}`);
+    dialog.showErrorBox('Error de Inicio', `No se pudo lanzar el servidor:\n${err.message}`);
+  });
+  backendProcess.on('exit', (code) => {
+    log(`Backend exited with code: ${code}`);
+    if (code !== 0 && code !== null) backendErrors.push(`Proceso terminó con código ${code}`);
+  });
+}
+
+app.whenReady().then(async () => {
+  log('--- App starting ---');
+  log(`Packaged: ${app.isPackaged}`);
+  log(`Resources: ${process.resourcesPath}`);
+
+  let command, args = [];
 
   if (app.isPackaged) {
-    const backendPath = path.join(process.resourcesPath, 'backend.exe');
-    log(`Backend path: ${backendPath}`);
-    log(`Backend exists: ${fs.existsSync(backendPath)}`);
-    command = backendPath;
-    args = [];
+    command = path.join(process.resourcesPath, 'backend.exe');
+    log(`Backend path: ${command} | Exists: ${fs.existsSync(command)}`);
   } else {
     const devExe = path.join(__dirname, '../backend/dist/backend.exe');
     if (fs.existsSync(devExe)) {
+      log('Using dev backend.exe');
       command = devExe;
     } else {
+      log('Falling back to python uvicorn');
       command = 'python';
       args = ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8080'];
-      process.chdir(path.join(__dirname, '../backend'));
     }
   }
-
-  log(`Starting backend: ${command} ${args.join(' ')}`);
-
-  // Usar execFile en modo empaquetado para manejar rutas con espacios
-  if (app.isPackaged) {
-    const { execFile } = require('child_process');
-    backendProcess = execFile(command, args, { windowsHide: true }, (error) => {
-      if (error) {
-        log(`Backend execFile error: ${error.message}`);
-        backendErrors.push(error.message);
-      }
-    });
-  } else {
-    backendProcess = spawn(command, args, { shell: true, detached: false });
-  }
-
-  if (backendProcess.stdout) {
-    backendProcess.stdout.on('data', (data) => {
-      log(`Backend OUT: ${data.toString().trim()}`);
-    });
-  }
-
-  if (backendProcess.stderr) {
-    backendProcess.stderr.on('data', (data) => {
-      const msg = data.toString().trim();
-      log(`Backend ERR: ${msg}`);
-      backendErrors.push(msg);
-    });
-  }
-
-  backendProcess.on('error', (err) => {
-    log(`Backend process error: ${err.message}`);
-    backendErrors.push(err.message);
-    dialog.showErrorBox("Error de Inicio", `No se pudo iniciar el servidor:\n${err.message}`);
-  });
-
-  backendProcess.on('exit', (code) => {
-    log(`Backend process exited with code: ${code}`);
-    if (code !== 0 && code !== null) {
-        backendErrors.push(`El proceso terminó con código ${code}`);
-    }
-  });
 
   const { session } = require('electron');
-  session.defaultSession.clearCache().then(() => {
+  await session.defaultSession.clearCache();
+
+  // Secuencia: liberar puerto → arrancar backend → crear ventanas
+  killPort(8080, () => {
+    log('Port 8080 cleared. Launching backend and windows...');
+    startBackend(command, args);
     createSplashWindow();
     createWindow();
   });
 
-  app.on('activate', function () {
+  app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
-// IPC Handler for Directory Selection
 ipcMain.handle('dialog:openDirectory', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory']
@@ -191,18 +199,10 @@ ipcMain.handle('dialog:openDirectory', async () => {
   return canceled ? null : filePaths[0];
 });
 
-app.on('window-all-closed', function () {
+app.on('window-all-closed', () => {
   if (backendProcess) {
-    log("Terminating backend...");
-    try {
-      if (process.platform === 'win32') {
-        exec(`taskkill /pid ${backendProcess.pid} /T /F`);
-      } else {
-        backendProcess.kill();
-      }
-    } catch(e) {
-      log(`Error killing backend: ${e.message}`);
-    }
+    log('Terminating backend...');
+    try { exec(`taskkill /pid ${backendProcess.pid} /T /F`); } catch(e) {}
   }
   if (process.platform !== 'darwin') app.quit();
 });

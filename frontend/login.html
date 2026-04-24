@@ -267,6 +267,10 @@
             <h1>Nuevo Acceso</h1>
             <p class="subtitle">Ingresa el PIN que te llegó al correo</p>
             <form id="reset-form">
+                <div id="reset-error" class="error-msg" style="display: none; margin-bottom: 16px;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="reset-error-text">PIN inválido o expirado</span>
+                </div>
                 <div class="form-group">
                     <label>PIN de Seguridad (6 dígitos)</label>
                     <div class="input-wrapper">

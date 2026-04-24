@@ -64,6 +64,27 @@ def get_bautizo_pdf(id: int, db: Session = Depends(get_db)):
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+@router.put("/bautizos/{id}", response_model=schemas.ActaBautizo)
+def update_bautizo(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    acta_in: schemas.ActaBautizoCreate
+) -> Any:
+    """Actualizar un acta de bautizo"""
+    obj = db.query(models.ActaBautizo).filter(models.ActaBautizo.id == id).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Acta no encontrada")
+    
+    update_data = acta_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(obj, field, value)
+    
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
 @router.delete("/bautizos/{id}")
 def delete_bautizo(id: int, db: Session = Depends(get_db)):
     obj = db.query(models.ActaBautizo).filter(models.ActaBautizo.id == id).first()
@@ -128,6 +149,27 @@ def get_matrimonio_pdf(id: int, db: Session = Depends(get_db)):
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+@router.put("/matrimonios/{id}", response_model=schemas.ActaMatrimonio)
+def update_matrimonio(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    acta_in: schemas.ActaMatrimonioCreate
+) -> Any:
+    """Actualizar un acta de matrimonio"""
+    obj = db.query(models.ActaMatrimonio).filter(models.ActaMatrimonio.id == id).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Acta no encontrada")
+    
+    update_data = acta_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(obj, field, value)
+    
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
 @router.delete("/matrimonios/{id}")
 def delete_matrimonio(id: int, db: Session = Depends(get_db)):
     obj = db.query(models.ActaMatrimonio).filter(models.ActaMatrimonio.id == id).first()
@@ -189,6 +231,27 @@ def get_confirmacion_pdf(id: int, db: Session = Depends(get_db)):
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+@router.put("/confirmaciones/{id}", response_model=schemas.ActaConfirmacion)
+def update_confirmacion(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    acta_in: schemas.ActaConfirmacionCreate
+) -> Any:
+    """Actualizar un acta de confirmación"""
+    obj = db.query(models.ActaConfirmacion).filter(models.ActaConfirmacion.id == id).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Acta no encontrada")
+    
+    update_data = acta_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(obj, field, value)
+    
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
 @router.delete("/confirmaciones/{id}")
 def delete_confirmacion(id: int, db: Session = Depends(get_db)):
     obj = db.query(models.ActaConfirmacion).filter(models.ActaConfirmacion.id == id).first()
@@ -249,6 +312,27 @@ def get_comunion_pdf(id: int, db: Session = Depends(get_db)):
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+@router.put("/comuniones/{id}", response_model=schemas.ActaComunion)
+def update_comunion(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    acta_in: schemas.ActaComunionCreate
+) -> Any:
+    """Actualizar un acta de primera comunión"""
+    obj = db.query(models.ActaComunion).filter(models.ActaComunion.id == id).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Acta no encontrada")
+    
+    update_data = acta_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(obj, field, value)
+    
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
 
 @router.delete("/comuniones/{id}")
 def delete_comunion(id: int, db: Session = Depends(get_db)):

@@ -112,7 +112,12 @@ document.getElementById('reset-form').addEventListener('submit', async (e) => {
     const newPassword = document.getElementById('reset-password').value;
     const btn = document.getElementById('btn-reset');
     const text = document.getElementById('btn-reset-text');
-    
+    const errorDiv = document.getElementById('reset-error');
+    const errorText = document.getElementById('reset-error-text');
+
+    // Limpiar error anterior
+    errorDiv.style.display = 'none';
+
     btn.disabled = true;
     text.innerText = "Cambiando...";
 
@@ -128,18 +133,38 @@ document.getElementById('reset-form').addEventListener('submit', async (e) => {
         });
 
         if (response.ok) {
-            alert("Contraseña creada exitosamente. ¡Ya puedes iniciar sesión!");
+            // Éxito: volver al login con mensaje
             viewReset.style.display = 'none';
             viewLogin.style.display = 'block';
             document.getElementById('login-email').value = resetEmail;
             document.getElementById('login-password').value = "";
             document.getElementById('login-password').focus();
+            
+            // Mostrar éxito en el login-error con color verde temporal
+            const loginError = document.getElementById('login-error');
+            const loginErrorText = document.getElementById('login-error-text');
+            loginError.style.display = 'flex';
+            loginError.style.background = '#dcfce7';
+            loginError.style.color = '#16a34a';
+            loginError.style.borderColor = '#bbf7d0';
+            loginErrorText.innerText = '✓ Contraseña cambiada exitosamente. Ya puedes iniciar sesión.';
+            setTimeout(() => { loginError.style.display = 'none'; }, 5000);
         } else {
-            const errData = await response.json();
-            alert("Error: " + (errData.detail || "PIN inválido o expirado"));
+            const errData = await response.json().catch(() => ({}));
+            // Mostrar error inline — sin alert() para evitar bugs de foco en Electron
+            errorText.innerText = errData.detail || "PIN inválido o expirado. Intenta nuevamente.";
+            errorDiv.style.display = 'flex';
+            // Limpiar solo el PIN para que el usuario reintente
+            const pinField = document.getElementById('reset-pin');
+            pinField.value = '';
+            pinField.focus();
         }
     } catch (err) {
-        alert("Error de conexión al servidor");
+        errorText.innerText = "Error de conexión al servidor.";
+        errorDiv.style.display = 'flex';
+        const pinField = document.getElementById('reset-pin');
+        pinField.value = '';
+        pinField.focus();
     } finally {
         btn.disabled = false;
         text.innerText = "Cambiar Contraseña";

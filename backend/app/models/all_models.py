@@ -153,6 +153,7 @@ class ActaBautizo(Base):
     folio = Column(String(50))
     numero = Column(String(50))
     archivo_adjunto = Column(String(255))
+    parroco_firmante = Column(String(255))
     fecha_registro = Column(DateTime(timezone=True), server_default=func.now())
 
 class ActaMatrimonio(Base):
@@ -186,6 +187,7 @@ class ActaMatrimonio(Base):
     folio = Column(String(50))
     numero = Column(String(50))
     archivo_adjunto = Column(String(255))
+    parroco_firmante = Column(String(255))
     fecha_registro = Column(DateTime(timezone=True), server_default=func.now())
 
 class ActaConfirmacion(Base):
@@ -211,6 +213,7 @@ class ActaConfirmacion(Base):
     folio = Column(String(50))
     numero = Column(String(50))
     archivo_adjunto = Column(String(255))
+    parroco_firmante = Column(String(255))
     fecha_registro = Column(DateTime(timezone=True), server_default=func.now())
 
 class ActaComunion(Base):
@@ -235,5 +238,6 @@ class ActaComunion(Base):
     folio = Column(String(50))
     numero = Column(String(50))
     archivo_adjunto = Column(String(255))
+    parroco_firmante = Column(String(255))
     fecha_registro = Column(DateTime(timezone=True), server_default=func.now())
 

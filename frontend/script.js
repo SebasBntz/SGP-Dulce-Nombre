@@ -156,6 +156,7 @@ function showSection(section) {
             if (balanceSection) balanceSection.style.display = (section === 'aportes' ? 'block' : 'none');
             
             currentPage = 0;
+            currentEditingId = null; // Reset edit state when switching sections
             closePanel();
             loadRecords();
         }
@@ -225,6 +226,7 @@ async function loadRecords() {
             if (config.endpoint.includes('/actas/')) {
                 rowBody += `<button class="btn-pdf" onclick="downloadPDF(${recordId}, '${currentSection}')" title="Descargar PDF"><i class="fas fa-file-pdf"></i></button>`;
             }
+            rowBody += `<button class="btn-edit" style="color:#0d6e4e; background:#dcfce7; border:none; width:38px; height:38px; border-radius:10px; cursor:pointer; margin-right:5px;" onclick="editRecord(${recordId})" title="Editar"><i class="fas fa-edit"></i></button>`;
             rowBody += `<button class="btn-view" onclick="viewRecord(${recordId})" title="Ver Detalles"><i class="fas fa-eye"></i></button>`;
             rowBody += `<button class="btn-delete" style="color:#ef4444; background:#fee2e2; border:none; width:38px; height:38px; border-radius:10px; cursor:pointer;" onclick="deleteRecord(${recordId})" title="Eliminar"><i class="fas fa-trash"></i></button>`;
             rowBody += `</td>`;
@@ -319,6 +321,35 @@ async function downloadPDF(id, section) {
     }
 }
 
+async function editRecord(id) {
+    const record = window.currentRecordsData?.find(r => (r.id || r.id_persona || r.id_sacerdote || r.id_grupo || r.id_aporte) == id);
+    if (!record) return;
+
+    currentEditingId = id;
+    openPanel(); // This populates fields
+    
+    const title = document.getElementById('panel-title');
+    title.innerText = `Editar: ${sectionConfig[currentSection].title}`;
+
+    // Wait a tiny bit for the panel fields to be rendered by openPanel()
+    setTimeout(() => {
+        const form = document.getElementById('record-form');
+        if (!form) return;
+
+        // Fill form fields with record data
+        for (const [key, value] of Object.entries(record)) {
+            const input = form.elements[key];
+            if (input) {
+                if (input.type === 'date' && value) {
+                    input.value = value.split('T')[0]; // Format for date input
+                } else {
+                    input.value = value;
+                }
+            }
+        }
+    }, 50);
+}
+
 function viewRecord(id) {
     const record = window.currentRecordsData?.find(r => (r.id || r.id_persona || r.id_sacerdote || r.id_grupo || r.id_aporte) == id);
     if (!record) return;
@@ -369,7 +400,9 @@ function openPanel() {
     const title = document.getElementById('panel-title');
     const fields = document.getElementById('form-fields');
     
-    title.innerText = `Nuevo: ${sectionConfig[currentSection].title}`;
+    if (!currentEditingId) {
+        title.innerText = `Nuevo: ${sectionConfig[currentSection].title}`;
+    }
     
     // Dynamic Fields optimization
     let html = '';
@@ -392,7 +425,7 @@ function openPanel() {
             <div class="form-group"><label>Padrinos</label><input type="text" name="nombre_padrino"></div>
             <div class="form-group"><label>Ministro</label><input type="text" name="nombre_cura" list="priests-list"></div>
             <div class="form-group"><label>Párroco (Doy Fe)</label><input type="text" name="da_fe" list="priests-list"></div>
-            <div class="form-group full-width"><label>Nota al Margen</label><textarea name="nota_al_margen" rows="3"></textarea></div>
+            <div class="form-group full-width"><label>Párroco Firmante</label><input type="text" name="parroco_firmante" list="priests-list" placeholder="Seleccione o escriba el nombre"></div>
         `;
     } else if (s === 'matrimonios') {
         html = `
@@ -415,7 +448,7 @@ function openPanel() {
             <div class="form-group"><label>Presenció (Ministro)</label><input type="text" name="nombre_cura" list="priests-list" placeholder=""></div>
             <div class="form-group full-width"><label>Legitimación de Hijos</label><input type="text" name="legitimacion_hijos" placeholder=""></div>
             <div class="form-group"><label>Da Fe (Párroco)</label><input type="text" name="da_fe" list="priests-list" placeholder=""></div>
-            <div class="form-group full-width"><label>Nota al Margen</label><textarea name="nota_al_margen" rows="3" placeholder=""></textarea></div>
+            <div class="form-group full-width"><label>Párroco Firmante</label><input type="text" name="parroco_firmante" list="priests-list" placeholder="Seleccione o escriba el nombre"></div>
         `;
     } else if (s === 'confirmaciones') {
         html = `
@@ -437,7 +470,7 @@ function openPanel() {
             <div class="form-group"><label>Obispo (Quien Confirma)</label><input type="text" name="obispo"></div>
             <div class="form-group"><label>Ministro (Párroco)</label><input type="text" name="nombre_cura" list="priests-list"></div>
             <div class="form-group"><label>Doy Fe (Párroco)</label><input type="text" name="da_fe" list="priests-list"></div>
-            <div class="form-group full-width"><label>Nota al Margen</label><textarea name="nota_al_margen" rows="3"></textarea></div>
+            <div class="form-group full-width"><label>Párroco Firmante</label><input type="text" name="parroco_firmante" list="priests-list" placeholder="Seleccione o escriba el nombre"></div>
         `;
     } else if (s === 'comuniones') {
         html = `
@@ -458,7 +491,7 @@ function openPanel() {
             <div class="form-group"><label>Madrina</label><input type="text" name="madrina"></div>
             <div class="form-group"><label>Ministro (Párroco)</label><input type="text" name="nombre_cura" list="priests-list"></div>
             <div class="form-group"><label>Doy Fe (Párroco)</label><input type="text" name="da_fe" list="priests-list"></div>
-            <div class="form-group full-width"><label>Nota al Margen</label><textarea name="nota_al_margen" rows="3"></textarea></div>
+            <div class="form-group full-width"><label>Párroco Firmante</label><input type="text" name="parroco_firmante" list="priests-list" placeholder="Seleccione o escriba el nombre"></div>
         `;
     } else if (['personas', 'sacerdotes'].includes(s)) {
         html = `
@@ -488,6 +521,11 @@ function openPanel() {
     initSelectors();
 }
 
+function openAddPanel() {
+    currentEditingId = null;
+    openPanel();
+}
+
 function closePanel() {
     document.getElementById('side-panel')?.classList.remove('open');
     document.getElementById('record-form')?.reset();
@@ -505,8 +543,12 @@ async function saveRecord(e) {
     const config = sectionConfig[currentSection];
 
     try {
-        const response = await authFetch(`${API_BASE}${config.endpoint}`, {
-            method: 'POST',
+        const url = currentEditingId 
+            ? `${API_BASE}${config.endpoint}${currentEditingId}`
+            : `${API_BASE}${config.endpoint}`;
+            
+        const response = await authFetch(url, {
+            method: currentEditingId ? 'PUT' : 'POST',
             body: JSON.stringify(data)
         });
         

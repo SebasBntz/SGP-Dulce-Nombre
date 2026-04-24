@@ -32,6 +32,7 @@ class ActaBautizoBase(ActaBase):
     nombre_cura: Optional[str] = None
     da_fe: Optional[str] = None
     nota_al_margen: Optional[str] = None
+    parroco_firmante: Optional[str] = None
 
 class ActaBautizoCreate(ActaBautizoBase):
     pass
@@ -64,6 +65,7 @@ class ActaMatrimonioBase(BaseModel):
     testigos: Optional[str] = None
     da_fe: Optional[str] = None
     nota_al_margen: Optional[str] = None
+    parroco_firmante: Optional[str] = None
 
     libro: Optional[str] = None
     folio: Optional[str] = None
@@ -93,6 +95,7 @@ class ActaConfirmacionBase(ActaBase):
     obispo: Optional[str] = None
     da_fe: Optional[str] = None
     nota_al_margen: Optional[str] = None
+    parroco_firmante: Optional[str] = None
 
 class ActaConfirmacionCreate(ActaConfirmacionBase):
     pass
@@ -114,6 +117,7 @@ class ActaComunionBase(ActaBase):
     nombre_cura: Optional[str] = None
     da_fe: Optional[str] = None
     nota_al_margen: Optional[str] = None
+    parroco_firmante: Optional[str] = None
 
 class ActaComunionCreate(ActaComunionBase):
     pass
