@@ -200,7 +200,13 @@ async function loadRecords() {
 
         // Optimized DOM updates with document fragment could go here, but strings are fine for this scale
         tbody.innerHTML = records.map(record => {
-            const recordId = record.id || record.id_persona || record.id_sacerdote || record.id_grupo || record.id_aporte;
+            // Detección de ID mejorada y específica para cada sección
+            let recordId = record.id || record.id_persona || record.id_sacerdote || record.id_grupo || record.id_aporte || record.id_comunion || record.id_confirmacion || record.id_bautizo || record.id_matrimonio;
+            
+            // Forzar ID específico según la sección si los genéricos fallan
+            if (currentSection === 'grupos') recordId = record.id_grupo || recordId;
+            if (currentSection === 'aportes') recordId = record.id_aporte || recordId;
+            
             let rowBody = '';
             
             if (['bautizos', 'confirmaciones', 'comuniones', 'matrimonios'].includes(currentSection)) {
@@ -228,7 +234,11 @@ async function loadRecords() {
             }
             rowBody += `<button class="btn-edit" style="color:#0d6e4e; background:#dcfce7; border:none; width:38px; height:38px; border-radius:10px; cursor:pointer; margin-right:5px;" onclick="editRecord(${recordId})" title="Editar"><i class="fas fa-edit"></i></button>`;
             rowBody += `<button class="btn-view" onclick="viewRecord(${recordId})" title="Ver Detalles"><i class="fas fa-eye"></i></button>`;
-            rowBody += `<button class="btn-delete" style="color:#ef4444; background:#fee2e2; border:none; width:38px; height:38px; border-radius:10px; cursor:pointer;" onclick="deleteRecord(${recordId})" title="Eliminar"><i class="fas fa-trash"></i></button>`;
+            
+            // Do not show delete button for priests
+            if (currentSection !== 'sacerdotes') {
+                rowBody += `<button class="btn-delete" style="color:#ef4444; background:#fee2e2; border:none; width:38px; height:38px; border-radius:10px; cursor:pointer;" onclick="deleteRecord(${recordId})" title="Eliminar"><i class="fas fa-trash"></i></button>`;
+            }
             rowBody += `</td>`;
             
             return `<tr>${rowBody}</tr>`;
@@ -326,28 +336,35 @@ async function editRecord(id) {
     if (!record) return;
 
     currentEditingId = id;
-    openPanel(); // This populates fields
+    openPanel(); // This populates fields and resets state
     
     const title = document.getElementById('panel-title');
-    title.innerText = `Editar: ${sectionConfig[currentSection].title}`;
+    if (title) title.innerText = `Editar: ${sectionConfig[currentSection].title}`;
 
-    // Wait a tiny bit for the panel fields to be rendered by openPanel()
+    // Fill form fields with record data
+    const form = document.getElementById('record-form');
+    if (!form) return;
+
+    // Wait for the dynamic HTML to be ready in the DOM
     setTimeout(() => {
-        const form = document.getElementById('record-form');
-        if (!form) return;
-
-        // Fill form fields with record data
+        let firstInput = null;
         for (const [key, value] of Object.entries(record)) {
             const input = form.elements[key];
             if (input) {
+                if (!firstInput && input.type !== 'hidden') firstInput = input;
                 if (input.type === 'date' && value) {
-                    input.value = value.split('T')[0]; // Format for date input
+                    input.value = value.split('T')[0];
                 } else {
                     input.value = value;
                 }
+                // Ensure field is writeable and clickable
+                input.readOnly = false;
+                input.disabled = false;
+                input.style.pointerEvents = 'auto';
             }
         }
-    }, 50);
+        if (firstInput) firstInput.focus();
+    }, 100);
 }
 
 function viewRecord(id) {
@@ -377,21 +394,67 @@ function closeDetailsModal() {
     document.getElementById('details-modal').style.display = 'none';
 }
 
+function customConfirm(message) {
+    return new Promise((resolve) => {
+        let modal = document.getElementById('custom-confirm-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'custom-confirm-modal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;justify-content:center;align-items:center;';
+            modal.innerHTML = `
+                <div style="background:white;padding:30px;border-radius:12px;max-width:400px;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+                    <p id="custom-confirm-text" style="margin:0 0 20px 0;font-size:16px;color:#334155;font-weight:600;"></p>
+                    <div style="display:flex;gap:10px;justify-content:center;">
+                        <button id="custom-confirm-cancel" style="padding:10px 20px;border:1px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;color:#475569;font-weight:bold;transition:all 0.2s;">Cancelar</button>
+                        <button id="custom-confirm-ok" style="padding:10px 20px;border:none;background:#ef4444;border-radius:8px;cursor:pointer;color:white;font-weight:bold;transition:all 0.2s;">Confirmar</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        document.getElementById('custom-confirm-text').innerText = message;
+        modal.style.display = 'flex';
+        
+        document.getElementById('custom-confirm-cancel').onclick = () => {
+            modal.style.display = 'none';
+            resolve(false);
+        };
+        
+        document.getElementById('custom-confirm-ok').onclick = () => {
+            modal.style.display = 'none';
+            resolve(true);
+        };
+    });
+}
+
 async function deleteRecord(id) {
-    if (!confirm("¿Estás seguro de eliminar este registro permanentemente?")) return;
+    console.log(`Intentando eliminar registro ID: ${id} en sección: ${currentSection}`);
+    if (!id) {
+        showToast("Error: No se pudo identificar el ID del registro", "error");
+        return;
+    }
+    const confirmed = await customConfirm("¿Estás seguro de eliminar este registro permanentemente?");
+    if (!confirmed) return;
     
     try {
         const config = sectionConfig[currentSection];
-        const response = await authFetch(`${API_BASE}${config.endpoint}${id}`, { method: 'DELETE' });
+        // Normalizar la URL: eliminar la barra final si existe y añadir el ID limpiamente
+        const baseEndpoint = config.endpoint.endsWith('/') ? config.endpoint.slice(0, -1) : config.endpoint;
+        const response = await authFetch(`${API_BASE}${baseEndpoint}/${id}`, { method: 'DELETE' });
+        
         if (response.ok) {
             showToast("Registro eliminado con éxito", "success");
+            closePanel(); 
             loadRecords();
             if (currentSection !== 'dashboard') loadDashboardStats();
         } else {
-            showToast("No se pudo eliminar el registro", "error");
+            const errData = await response.json().catch(() => ({}));
+            const msg = errData.detail || "No se pudo eliminar el registro";
+            showToast(msg, "error");
         }
     } catch (error) {
-        showToast("Error al procesar eliminación", "error");
+        showToast("Error de conexión al eliminar", "error");
     }
 }
 
@@ -399,9 +462,19 @@ function openPanel() {
     const panel = document.getElementById('side-panel');
     const title = document.getElementById('panel-title');
     const fields = document.getElementById('form-fields');
+    const form = document.getElementById('record-form');
     
+    // Safety: Hide any other blocking elements
+    closeDetailsModal();
+    
+    if (form) {
+        form.reset();
+        // Ensure form is visible and clickable
+        form.style.pointerEvents = 'auto';
+    }
+
     if (!currentEditingId) {
-        title.innerText = `Nuevo: ${sectionConfig[currentSection].title}`;
+        if (title) title.innerText = `Nuevo: ${sectionConfig[currentSection].title}`;
     }
     
     // Dynamic Fields optimization
@@ -502,7 +575,7 @@ function openPanel() {
         `;
     } else if (s === 'aportes') {
         html = `
-            <div class="form-group"><label>Feligrés</label><input type="text" name="persona_nombre" list="personas-list"></div>
+            <div class="form-group"><label>Feligrés</label><input type="text" name="persona_nombre" placeholder="Nombre"></div>
             <div class="form-group"><label>Monto</label><input type="number" name="monto" required min="0"></div>
             <div class="form-group"><label>Tipo</label><select name="tipo"><option>Diezmo</option><option>Ofrenda</option><option>Donación</option><option>Otro</option></select></div>
             <div class="form-group"><label>Fecha</label><input type="date" name="fecha" value="${new Date().toISOString().split('T')[0]}"></div>
@@ -519,6 +592,15 @@ function openPanel() {
     fields.innerHTML = html;
     panel.classList.add('open');
     initSelectors();
+
+    // FORCE FOCUS on the first input after a short delay
+    setTimeout(() => {
+        const firstInput = fields.querySelector('input:not([type="hidden"]), select, textarea');
+        if (firstInput) {
+            firstInput.focus();
+            firstInput.click(); // Some browsers need a click to activate
+        }
+    }, 200);
 }
 
 function openAddPanel() {
@@ -730,7 +812,6 @@ function renderAportesCharts(data) {
     });
 }
 
-// --- Respaldo de Base de Datos ---
 async function performBackup() {
     if (window.electronAPI && window.electronAPI.selectFolder) {
         try {
@@ -747,15 +828,84 @@ async function performBackup() {
             const data = await response.json();
             
             if (response.ok) {
-                alert("¡Respaldo exitoso!\n\nArchivo guardado en:\n" + folderPath);
+                showToast("¡Respaldo creado con éxito en: " + folderPath, "success");
             } else {
-                alert("Error: " + (data.detail || "No se pudo crear el respaldo"));
+                showToast("Error: " + (data.detail || "No se pudo crear el respaldo"), "error");
             }
         } catch (error) {
             console.error(error);
-            alert("Error de conexión al intentar crear el respaldo.");
+            showToast("Error de conexión al intentar crear el respaldo.", "error");
         }
     } else {
-        alert("Esta función solo está disponible instalando la aplicación de escritorio.");
+        alert("Esta función solo está disponible en la aplicación de escritorio.");
+    }
+}
+
+// --- Importar Respaldo de Base de Datos ---
+async function performRestore() {
+    if (!window.electronAPI || !window.electronAPI.selectFile) {
+        alert("Esta función solo está disponible en la aplicación de escritorio.");
+        return;
+    }
+
+    const confirmed = await customConfirm(
+        "⚠️ ATENCIÓN: Importar un respaldo reemplazará TODOS los datos actuales.\n\n" +
+        "Se creará un respaldo automático de los datos actuales antes de continuar.\n\n" +
+        "¿Deseas continuar?"
+    );
+    if (!confirmed) return;
+
+    try {
+        const filePath = await window.electronAPI.selectFile([
+            { name: 'Base de Datos SQLite', extensions: ['db'] }
+        ]);
+        if (!filePath) return;
+
+        showToast("Leyendo archivo...", "success");
+
+        // Leer el archivo via el proceso principal de Electron (evita restricciones de seguridad)
+        const base64Data = await window.electronAPI.readFileAsBase64(filePath);
+        if (!base64Data) {
+            showToast("No se pudo leer el archivo seleccionado.", "error");
+            return;
+        }
+
+        // Convertir base64 a Blob y enviarlo como FormData al backend
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Uint8Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const blob = new Blob([byteNumbers], { type: 'application/octet-stream' });
+        const filename = filePath.split('\\').pop() || filePath.split('/').pop();
+        const file = new File([blob], filename);
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        showToast("Restaurando base de datos...", "success");
+
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`${API_BASE}/parroquia/db/restore`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(
+                "✅ ¡Respaldo importado con éxito!\n\n" +
+                "Los datos han sido restaurados correctamente.\n\n" +
+                "La aplicación se recargará ahora para mostrar los nuevos datos."
+            );
+            window.location.reload();
+        } else {
+            showToast("Error al importar: " + (data.detail || "Archivo inválido"), "error");
+        }
+    } catch (error) {
+        console.error(error);
+        showToast("Error al procesar el archivo de respaldo.", "error");
     }
 }

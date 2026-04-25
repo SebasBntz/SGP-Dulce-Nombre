@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 from typing import List, Dict, Any, Optional
 from app.db.session import get_db
 from app.models.all_models import (
-    Persona, Sacerdote, Grupo, Aporte, GrupoPersona, 
+    Persona, Sacerdote, Grupo, Aporte, GrupoPersona, GrupoAporte,
     ActaBautizo, ActaMatrimonio, ActaConfirmacion, ActaComunion
 )
 from app.schemas.parroquia import (
@@ -98,6 +98,26 @@ def create_persona(persona: PersonaCreate, db: Session = Depends(get_db)):
     db.refresh(db_persona)
     return db_persona
 
+@router.put("/personas/{id_persona}", response_model=PersonaSchema)
+def update_persona(id_persona: int, persona: PersonaCreate, db: Session = Depends(get_db)):
+    db_persona = db.query(Persona).filter(Persona.id_persona == id_persona).first()
+    if not db_persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
+    for key, value in persona.model_dump().items():
+        setattr(db_persona, key, value)
+    db.commit()
+    db.refresh(db_persona)
+    return db_persona
+
+@router.delete("/personas/{id_persona}")
+def delete_persona(id_persona: int, db: Session = Depends(get_db)):
+    db_persona = db.query(Persona).filter(Persona.id_persona == id_persona).first()
+    if not db_persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
+    db.delete(db_persona)
+    db.commit()
+    return {"status": "ok"}
+
 # --- Sacerdotes ---
 @router.get("/sacerdotes/", response_model=Any)
 def read_sacerdotes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -113,6 +133,26 @@ def create_sacerdote(sacerdote: SacerdoteCreate, db: Session = Depends(get_db)):
     db.refresh(db_sacerdote)
     return db_sacerdote
 
+@router.put("/sacerdotes/{id_sacerdote}", response_model=SacerdoteSchema)
+def update_sacerdote(id_sacerdote: int, sacerdote: SacerdoteCreate, db: Session = Depends(get_db)):
+    db_sacerdote = db.query(Sacerdote).filter(Sacerdote.id_sacerdote == id_sacerdote).first()
+    if not db_sacerdote:
+        raise HTTPException(status_code=404, detail="Sacerdote no encontrado")
+    for key, value in sacerdote.model_dump().items():
+        setattr(db_sacerdote, key, value)
+    db.commit()
+    db.refresh(db_sacerdote)
+    return db_sacerdote
+
+@router.delete("/sacerdotes/{id_sacerdote}")
+def delete_sacerdote(id_sacerdote: int, db: Session = Depends(get_db)):
+    db_sacerdote = db.query(Sacerdote).filter(Sacerdote.id_sacerdote == id_sacerdote).first()
+    if not db_sacerdote:
+        raise HTTPException(status_code=404, detail="Sacerdote no encontrado")
+    db.delete(db_sacerdote)
+    db.commit()
+    return {"status": "ok"}
+
 # --- Grupos ---
 @router.get("/grupos/", response_model=Any)
 def read_grupos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -127,6 +167,35 @@ def create_grupo(grupo: GrupoCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_grupo)
     return db_grupo
+
+@router.put("/grupos/{id_grupo}", response_model=GrupoSchema)
+def update_grupo(id_grupo: int, grupo: GrupoCreate, db: Session = Depends(get_db)):
+    db_grupo = db.query(Grupo).filter(Grupo.id_grupo == id_grupo).first()
+    if not db_grupo:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+    for key, value in grupo.model_dump().items():
+        setattr(db_grupo, key, value)
+    db.commit()
+    db.refresh(db_grupo)
+    return db_grupo
+
+@router.delete("/grupos/{id_grupo}")
+def delete_grupo(id_grupo: int, db: Session = Depends(get_db)):
+    db_grupo = db.query(Grupo).filter(Grupo.id_grupo == id_grupo).first()
+    if not db_grupo:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+    
+    try:
+        # Usar SQL directo para asegurar que se borre todo lo relacionado sin bloqueos de sesión
+        from sqlalchemy import text
+        db.execute(text("DELETE FROM grupo_persona WHERE id_grupo = :id"), {"id": id_grupo})
+        db.execute(text("DELETE FROM grupo_aportes WHERE id_grupo = :id"), {"id": id_grupo})
+        db.delete(db_grupo)
+        db.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al eliminar grupo: {str(e)}")
 
 @router.get("/grupos/{id_grupo}/miembros", response_model=List[PersonaSchema])
 def read_grupo_miembros(id_grupo: int, db: Session = Depends(get_db)):
@@ -266,7 +335,70 @@ def create_aporte(aporte: AporteCreate, db: Session = Depends(get_db)):
     db.refresh(db_aporte)
     return jsonable_encoder(db_aporte)
 
-# --- Database Backup ---
+@router.put("/aportes/{id_aporte}", response_model=Any)
+def update_aporte(id_aporte: int, aporte: AporteCreate, db: Session = Depends(get_db)):
+    db_aporte = db.query(Aporte).filter(Aporte.id_aporte == id_aporte).first()
+    if not db_aporte:
+        raise HTTPException(status_code=404, detail="Aporte no encontrado")
+    
+    data = aporte.model_dump()
+    if data.get("persona_nombre"):
+        persona = find_or_create_persona(data.pop("persona_nombre"), db)
+        data["id_persona"] = persona.id_persona
+    
+    for key, value in data.items():
+        setattr(db_aporte, key, value)
+    
+    db.commit()
+    db.refresh(db_aporte)
+    return jsonable_encoder(db_aporte)
+
+@router.delete("/aportes/{id_aporte}")
+def delete_aporte(id_aporte: int, db: Session = Depends(get_db)):
+    db_aporte = db.query(Aporte).filter(Aporte.id_aporte == id_aporte).first()
+    if not db_aporte:
+        raise HTTPException(status_code=404, detail="Aporte no encontrado")
+    db.delete(db_aporte)
+    db.commit()
+    return {"status": "ok"}
+
+# --- Database Restore ---
+@router.post("/db/restore")
+async def restore_backup(file: UploadFile = File(...)):
+    """
+    Reemplaza la base de datos activa con el archivo .db subido.
+    Crea un respaldo automático antes de restaurar por seguridad.
+    """
+    try:
+        db_uri = settings.SQLALCHEMY_DATABASE_URI
+        if not db_uri.startswith("sqlite:///"):
+            raise HTTPException(status_code=400, detail="Solo se admite SQLite")
+
+        db_path = db_uri.replace("sqlite:///", "")
+
+        # Validar que el archivo subido sea un SQLite válido
+        content = await file.read()
+        if not content.startswith(b"SQLite format 3"):
+            raise HTTPException(status_code=400, detail="El archivo no es una base de datos SQLite válida")
+
+        # Crear respaldo automático antes de restaurar
+        if os.path.exists(db_path):
+            backup_dir = os.path.dirname(db_path)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            auto_backup = os.path.join(backup_dir, f"auto_backup_antes_restaurar_{timestamp}.db")
+            shutil.copy2(db_path, auto_backup)
+
+        # Escribir el nuevo archivo
+        with open(db_path, "wb") as f:
+            f.write(content)
+
+        return {"status": "ok", "message": "Base de datos restaurada con éxito. Reinicia la aplicación para aplicar los cambios."}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/db/backup")
 def create_backup(destination_dir: str):
     """

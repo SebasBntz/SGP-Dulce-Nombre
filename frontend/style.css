@@ -337,7 +337,7 @@ tbody tr:hover { background-color: #fbfcfd; }
     height: 100vh;
     background: white;
     box-shadow: -20px 0 50px rgba(0,0,0,0.15);
-    z-index: 1000;
+    z-index: 3000;
     transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
     display: flex;

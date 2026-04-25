@@ -5,7 +5,7 @@ a = Analysis(
     ['main_exe.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('app', 'app'), ('.env', '.')],
     hiddenimports=['passlib.handlers.argon2'],
     hookspath=[],
     hooksconfig={},

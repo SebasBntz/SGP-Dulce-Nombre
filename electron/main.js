@@ -199,6 +199,23 @@ ipcMain.handle('dialog:openDirectory', async () => {
   return canceled ? null : filePaths[0];
 });
 
+ipcMain.handle('dialog:openFile', async (event, filters) => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: filters || [{ name: 'Base de Datos SQLite', extensions: ['db'] }]
+  });
+  return canceled ? null : filePaths[0];
+});
+
+ipcMain.handle('fs:readFileBase64', async (event, filePath) => {
+  try {
+    const data = fs.readFileSync(filePath);
+    return data.toString('base64');
+  } catch (e) {
+    return null;
+  }
+});
+
 app.on('window-all-closed', () => {
   if (backendProcess) {
     log('Terminating backend...');
